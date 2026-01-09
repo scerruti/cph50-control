@@ -6,17 +6,39 @@ Runs on cron schedule to start charging at 6 AM PST/PDT
 
 import os
 import sys
+import time
 from datetime import datetime
 from zoneinfo import ZoneInfo
 from python_chargepoint import ChargePoint
 from python_chargepoint.exceptions import ChargePointCommunicationException
 
 
-def should_charge_now():
-    """Check if current time in America/Los_Angeles is 6 AM (hour 6)."""
+def wait_until_charge_window():
+    """Wait until 6:00 AM Pacific if invoked early (e.g., 5 AM)."""
     pacific = ZoneInfo("America/Los_Angeles")
     now = datetime.now(pacific)
-    return now.hour == 6
+
+    # If already past 6, skip for today
+    if now.hour > 6:
+        print(f"ℹ️  Past charging window (current hour: {now.hour}, target: 6) - exiting")
+        return False
+
+    # If exactly 6, proceed
+    if now.hour == 6:
+        return True
+
+    # If 5 AM, wait until 6:00 AM Pacific
+    if now.hour == 5:
+        target = now.replace(hour=6, minute=0, second=0, microsecond=0)
+        wait_seconds = (target - now).total_seconds()
+        if wait_seconds > 0:
+            print(f"⏳ Waiting until 6:00 AM PT ({int(wait_seconds)}s)...")
+            time.sleep(wait_seconds)
+        return True
+
+    # Any other hour (should not happen with our cron), exit
+    print(f"ℹ️  Not charging window (current hour: {now.hour}, target: 6) - exiting")
+    return False
 
 
 def charge():
@@ -137,14 +159,12 @@ def main():
     print(f"Run Time (PST): {datetime.now(ZoneInfo('America/Los_Angeles')).strftime('%Y-%m-%d %H:%M:%S %Z')}")
     print("=" * 60)
     
-    # Check if it's 6 AM PST
-    if not should_charge_now():
-        pacific_hour = datetime.now(ZoneInfo("America/Los_Angeles")).hour
-        print(f"ℹ️  Not charging time (current hour: {pacific_hour}, target: 6)")
+    # Wait until 6 AM PT if we were triggered at 5 AM to cover DST
+    if not wait_until_charge_window():
         print("Exiting normally")
         sys.exit(0)
     
-    print("🎯 It's 6 AM PST - initiating charge sequence...")
+    print("🎯 It's 6 AM PT - initiating charge sequence...")
     
     # Attempt to charge
     success = charge()
