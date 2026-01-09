@@ -68,9 +68,11 @@ jobs:
                 print(f"  Connected:      {status.connected} {'✅' if status.connected else '❌'}")
                 print(f"  Plugged In:     {status.plugged_in} {'✅' if status.plugged_in else '❌'}")
                 print(f"  Last Connected: {status.last_connected_at}")
-                print(f"  Port Number:    {status.port_number}")
-                print(f"  MAC Address:    {status.mac_address}")
                 
+                if hasattr(status, 'port_number'):
+                    print(f"  Port Number:    {status.port_number}")
+                if hasattr(status, 'mac_address'):
+                    print(f"  MAC Address:    {status.mac_address}")
                 if hasattr(status, 'status'):
                     print(f"  Status:         {status.status}")
                 
