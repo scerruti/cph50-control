@@ -1,0 +1,216 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Session Labeling - Vehicle Identification</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: #f5f5f5;
+            padding: 20px;
+            color: #333;
+        }
+        .container { max-width: 1000px; margin: 0 auto; }
+        header {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 30px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+        }
+        header h1 { margin-bottom: 10px; }
+        .notice {
+            background: #fff3cd;
+            border: 1px solid #ffc107;
+            padding: 15px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+        }
+        .notice h3 { color: #856404; margin-bottom: 5px; }
+        .stats {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 15px;
+            margin-bottom: 20px;
+        }
+        .stat-card {
+            background: white;
+            padding: 20px;
+            border-radius: 8px;
+            text-align: center;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        .stat-card .number { font-size: 2em; font-weight: bold; color: #667eea; }
+        .stat-card .label { color: #666; font-size: 0.9em; }
+        table {
+            width: 100%;
+            background: white;
+            border-radius: 8px;
+            overflow: hidden;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        th, td { padding: 12px; text-align: left; }
+        th { background: #667eea; color: white; font-weight: 600; }
+        tr:nth-child(even) { background: #f9fafb; }
+        .vehicle-select { padding: 8px; border-radius: 4px; border: 1px solid #ddd; }
+        .btn {
+            padding: 8px 16px;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 0.9em;
+        }
+        .btn-primary { background: #667eea; color: white; }
+        .btn-primary:hover { background: #5568d3; }
+        .btn:disabled { opacity: 0.5; cursor: not-allowed; }
+        .badge {
+            display: inline-block;
+            padding: 4px 8px;
+            border-radius: 4px;
+            font-size: 0.85em;
+            font-weight: 600;
+        }
+        .badge-unlabeled { background: #fee2e2; color: #7f1d1d; }
+        .badge-labeled { background: #d1fae5; color: #065f46; }
+        .instructions {
+            background: white;
+            padding: 20px;
+            border-radius: 8px;
+            margin-top: 20px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        .instructions h2 { margin-bottom: 10px; }
+        .instructions code {
+            background: #f3f4f6;
+            padding: 2px 6px;
+            border-radius: 3px;
+            font-family: 'Courier New', monospace;
+        }
+        .instructions pre {
+            background: #1f2937;
+            color: #f9fafb;
+            padding: 15px;
+            border-radius: 4px;
+            overflow-x: auto;
+            margin: 10px 0;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>🏷️ Session Labeling Portal</h1>
+            <p>Label charging sessions to train vehicle identification model</p>
+        </header>
+
+        <div class="notice">
+            <h3>⚠️ Manual Labeling Required</h3>
+            <p>This is a read-only dashboard. To label sessions, edit <code>data/sessions/{session_id}.json</code> files directly and commit changes.</p>
+        </div>
+
+        <div class="stats">
+            <div class="stat-card">
+                <div class="number" id="total-sessions">-</div>
+                <div class="label">Total Sessions</div>
+            </div>
+            <div class="stat-card">
+                <div class="number" id="unlabeled-sessions">-</div>
+                <div class="label">Unlabeled</div>
+            </div>
+            <div class="stat-card">
+                <div class="number" id="serenity-sessions">-</div>
+                <div class="label">🚙 Serenity</div>
+            </div>
+            <div class="stat-card">
+                <div class="number" id="volvo-sessions">-</div>
+                <div class="label">🚗 Volvo</div>
+            </div>
+        </div>
+
+        <div style="background: white; padding: 20px; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.1);">
+            <h2 style="margin-bottom: 15px;">Collected Sessions</h2>
+            <table id="sessions-table">
+                <thead>
+                    <tr>
+                        <th>Session ID</th>
+                        <th>Collected At</th>
+                        <th>Samples</th>
+                        <th>Avg Power</th>
+                        <th>Vehicle</th>
+                    </tr>
+                </thead>
+                <tbody id="sessions-tbody">
+                    <tr><td colspan="5" style="text-align: center; padding: 40px;">Loading sessions...</td></tr>
+                </tbody>
+            </table>
+        </div>
+
+        <div class="instructions">
+            <h2>📝 How to Label Sessions</h2>
+            <p><strong>Step 1:</strong> Clone the repo and open a session file:</p>
+            <pre>cd cph50-control
+code data/sessions/{session_id}.json</pre>
+            
+            <p><strong>Step 2:</strong> Update the vehicle fields:</p>
+            <pre>{
+  "session_id": "12345678",
+  ...
+  "vehicle_id": "serenity_equinox_2024",  // or "volvo_xc40_2021"
+  "labeled_by": "manual",
+  "labeled_at": "2026-01-09T20:30:00Z"
+}</pre>
+            
+            <p><strong>Step 3:</strong> Commit and push:</p>
+            <pre>git add data/sessions/{session_id}.json
+git commit -m "Label session {session_id} as Serenity"
+git push</pre>
+            
+            <p><strong>Vehicle IDs:</strong></p>
+            <ul style="margin-left: 20px; margin-top: 10px;">
+                <li><code>serenity_equinox_2024</code> - 🚙 2024 Chevrolet Equinox EV 2LT</li>
+                <li><code>volvo_xc40_2021</code> - 🚗 2021 Volvo XC40 Recharge P8</li>
+            </ul>
+        </div>
+    </div>
+
+    <script>
+        async function loadSessions() {
+            try {
+                // This would need a backend API in production
+                // For now, show placeholder with instructions
+                const tbody = document.getElementById('sessions-tbody');
+                tbody.innerHTML = `
+                    <tr>
+                        <td colspan="5" style="text-align: center; padding: 40px; color: #666;">
+                            <strong>No sessions collected yet</strong><br><br>
+                            Sessions will appear here once the monitor detects charging and collects data.<br>
+                            Manual trigger: <code>gh workflow run "Collect Session Data" -f session_id=12345678</code>
+                        </td>
+                    </tr>
+                `;
+                
+                // Update stats
+                document.getElementById('total-sessions').textContent = '0';
+                document.getElementById('unlabeled-sessions').textContent = '0';
+                document.getElementById('serenity-sessions').textContent = '0';
+                document.getElementById('volvo-sessions').textContent = '0';
+                
+            } catch (error) {
+                console.error('Error loading sessions:', error);
+                document.getElementById('sessions-tbody').innerHTML = `
+                    <tr>
+                        <td colspan="5" style="text-align: center; padding: 40px; color: #e74c3c;">
+                            Error loading sessions: ${error.message}
+                        </td>
+                    </tr>
+                `;
+            }
+        }
+
+        // Load on page load
+        document.addEventListener('DOMContentLoaded', loadSessions);
+    </script>
+</body>
+</html>
