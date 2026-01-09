@@ -11,8 +11,16 @@ import time
 import subprocess
 from datetime import datetime
 from zoneinfo import ZoneInfo
+from pathlib import Path
 from python_chargepoint import ChargePoint
 from python_chargepoint.exceptions import ChargePointCommunicationException
+
+# Import classifier
+try:
+    from classify_vehicle import VehicleClassifier
+    CLASSIFIER_AVAILABLE = True
+except ImportError:
+    CLASSIFIER_AVAILABLE = False
 
 
 def collect_session_data(session_id):
@@ -98,7 +106,20 @@ def collect_session_data(session_id):
             max_power = max(powers)
             min_power = min(powers)
             variance = sum((p - avg_power) ** 2 for p in powers) / len(powers)
+        
+        # Predict vehicle from power samples
+        vehicle_id = None
+        vehicle_confidence = None
+        if CLASSIFIER_AVAILABLE and valid_samples:
+            try:
+                classifier = VehicleClassifier()
+                vehicle_id, vehicle_confidence = classifier.predict(powers)
+                if vehicle_id:
+                    print(f"🚗 Vehicle Classification: {vehicle_id.upper()} (confidence: {vehicle_confidence:.1%})")
+            except Exception as e:
+                print(f"⚠️  Vehicle classification failed: {e}")
             
+            print()
             print("📈 Statistics:")
             print(f"   Valid Samples: {len(valid_samples)}/{len(samples)}")
             print(f"   Avg Power: {avg_power:.2f} kW")
@@ -126,9 +147,10 @@ def collect_session_data(session_id):
                 "min_power_kw": min_power if valid_samples else None,
                 "variance": variance if valid_samples else None,
             } if valid_samples else None,
-            "vehicle_id": None,  # To be labeled later
-            "labeled_by": None,
-            "labeled_at": None
+            "vehicle_id": vehicle_id,
+            "vehicle_confidence": vehicle_confidence,
+            "labeled_by": "classifier" if vehicle_id else None,
+            "labeled_at": datetime.now(ZoneInfo('UTC')).isoformat() if vehicle_id else None
         }
         
         with open(output_file, 'w') as f:

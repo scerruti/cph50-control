@@ -32,6 +32,11 @@ def save_current_session(session_id, status_info=None):
         "session_id": session_id,
         "timestamp": datetime.now(ZoneInfo('UTC')).isoformat(),
         "detected_at": datetime.now(ZoneInfo('America/Los_Angeles')).strftime('%Y-%m-%d %H:%M:%S %Z'),
+        "power_kw": status_info.get("power_kw") if status_info else None,
+        "energy_kwh": status_info.get("energy_kwh") if status_info else None,
+        "duration_minutes": status_info.get("duration_minutes") if status_info else None,
+        "vehicle_id": status_info.get("vehicle_id") if status_info else None,
+        "vehicle_confidence": status_info.get("vehicle_confidence") if status_info else None,
         "status": status_info or {}
     }
     
@@ -105,11 +110,21 @@ def monitor():
         # Extract current session info
         current_session_id = None
         is_charging = False
+        status_data = {}
         
         if hasattr(status, 'session_id') and status.session_id:
             current_session_id = str(status.session_id)
             is_charging = True
+            status_data = {
+                "session_id": current_session_id,
+                "charging": is_charging,
+                "power_kw": getattr(status, 'power_kw', None),
+                "energy_kwh": getattr(status, 'energy_kwh', None),
+                "duration_minutes": getattr(status, 'duration_minutes', None)
+            }
             print(f"📊 Active Session: {current_session_id}")
+            print(f"   Power: {status_data.get('power_kw', 'N/A')} kW")
+            print(f"   Energy: {status_data.get('energy_kwh', 'N/A')} kWh")
             print(f"   Charging: {is_charging}")
         else:
             print("ℹ️  No active charging session")
@@ -125,17 +140,15 @@ def monitor():
             print("=" * 60)
             
             # Save session
-            status_info = {
-                "session_id": current_session_id,
-                "charging": is_charging
-            }
-            save_current_session(current_session_id, status_info)
+            save_current_session(current_session_id, status_data)
             
             # Trigger data collection
             trigger_data_collection(current_session_id)
             
         elif current_session_id == last_session_id:
             print(f"✓ Same session continuing: {current_session_id}")
+            # Update current status for dashboard
+            save_current_session(current_session_id, status_data)
         else:
             print("✓ No active session (vehicle not charging)")
         

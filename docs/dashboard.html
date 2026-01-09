@@ -1,0 +1,337 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>CPH50 Charging Dashboard</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 20px;
+        }
+        
+        .container {
+            width: 100%;
+            max-width: 600px;
+            background: white;
+            border-radius: 20px;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+            overflow: hidden;
+        }
+        
+        .header {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 30px 20px;
+            text-align: center;
+        }
+        
+        .header h1 {
+            font-size: 24px;
+            margin-bottom: 5px;
+        }
+        
+        .header p {
+            font-size: 12px;
+            opacity: 0.9;
+        }
+        
+        .content {
+            padding: 40px 30px;
+        }
+        
+        .status-badge {
+            display: inline-block;
+            padding: 8px 16px;
+            border-radius: 20px;
+            font-size: 12px;
+            font-weight: 600;
+            margin-bottom: 30px;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+        
+        .status-badge.charging {
+            background: #4CAF50;
+            color: white;
+            animation: pulse 2s infinite;
+        }
+        
+        .status-badge.idle {
+            background: #9E9E9E;
+            color: white;
+        }
+        
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.7; }
+        }
+        
+        .vehicle-section {
+            text-align: center;
+            margin-bottom: 40px;
+        }
+        
+        .vehicle-image {
+            width: 100%;
+            max-width: 400px;
+            height: 250px;
+            background: #f5f5f5;
+            border-radius: 10px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin: 0 auto 20px;
+            overflow: hidden;
+            border: 2px solid #e0e0e0;
+        }
+        
+        .vehicle-image img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+        }
+        
+        .vehicle-name {
+            font-size: 20px;
+            font-weight: 600;
+            color: #333;
+            margin-bottom: 8px;
+        }
+        
+        .vehicle-confidence {
+            font-size: 12px;
+            color: #666;
+            margin-bottom: 20px;
+        }
+        
+        .power-section {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 30px;
+            border-radius: 10px;
+            text-align: center;
+            margin-bottom: 20px;
+        }
+        
+        .power-label {
+            font-size: 12px;
+            opacity: 0.9;
+            margin-bottom: 10px;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+        
+        .power-value {
+            font-size: 48px;
+            font-weight: 700;
+            font-family: 'Monaco', 'Courier New', monospace;
+            line-height: 1;
+            margin-bottom: 5px;
+        }
+        
+        .power-unit {
+            font-size: 14px;
+            opacity: 0.9;
+        }
+        
+        .info-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 15px;
+            margin-bottom: 20px;
+        }
+        
+        .info-card {
+            background: #f5f5f5;
+            padding: 15px;
+            border-radius: 8px;
+            text-align: center;
+        }
+        
+        .info-label {
+            font-size: 11px;
+            color: #999;
+            margin-bottom: 8px;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+        
+        .info-value {
+            font-size: 20px;
+            font-weight: 600;
+            color: #333;
+            font-family: 'Monaco', 'Courier New', monospace;
+        }
+        
+        .last-updated {
+            text-align: center;
+            font-size: 11px;
+            color: #999;
+            margin-top: 30px;
+            padding-top: 20px;
+            border-top: 1px solid #e0e0e0;
+        }
+        
+        .no-data {
+            text-align: center;
+            color: #999;
+            padding: 40px 20px;
+        }
+        
+        .no-data-icon {
+            font-size: 48px;
+            margin-bottom: 15px;
+        }
+        
+        .refresh-button {
+            display: inline-block;
+            margin-top: 10px;
+            padding: 10px 20px;
+            background: #667eea;
+            color: white;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 12px;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+        
+        .refresh-button:hover {
+            background: #764ba2;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>⚡ CPH50 Charging</h1>
+            <p>Home Charger Status Dashboard</p>
+        </div>
+        
+        <div class="content">
+            <div id="charging-status">
+                <div class="no-data">
+                    <div class="no-data-icon">📡</div>
+                    <p>Loading current charging status...</p>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <script>
+        const VEHICLE_IMAGES = {
+            volvo: 'data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 400 250"><rect fill="%23f5f5f5" width="400" height="250"/><text x="200" y="125" font-size="48" font-weight="bold" text-anchor="middle" fill="%23667eea">VOLVO</text><text x="200" y="160" font-size="18" text-anchor="middle" fill="%23999">XC40 Recharge</text><text x="200" y="185" font-size="14" text-anchor="middle" fill="%23ccc">2021</text></svg>',
+            equinox: 'data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 400 250"><rect fill="%23f5f5f5" width="400" height="250"/><text x="200" y="125" font-size="48" font-weight="bold" text-anchor="middle" fill="%23667eea">EQUINOX</text><text x="200" y="160" font-size="18" text-anchor="middle" fill="%23999">EV 2024</text><text x="200" y="185" font-size="14" text-anchor="middle" fill="%23ccc">Chevrolet</text></svg>'
+        };
+        
+        async function loadDashboard() {
+            try {
+                // Check if there's an active session file
+                const response = await fetch('data/last_session.json');
+                
+                if (!response.ok) {
+                    displayNoData();
+                    return;
+                }
+                
+                const session = await response.json();
+                displaySession(session);
+            } catch (error) {
+                console.error('Error loading dashboard:', error);
+                displayNoData();
+            }
+        }
+        
+        function displaySession(session) {
+            if (!session || !session.power_kw) {
+                displayNoData();
+                return;
+            }
+            
+            const isCharging = session.power_kw > 0.5;
+            const vehicle = session.vehicle_id || 'unknown';
+            const confidence = session.vehicle_confidence || 0;
+            
+            let vehicleDisplay = '';
+            let vehicleImage = VEHICLE_IMAGES[vehicle] || VEHICLE_IMAGES.volvo;
+            
+            if (vehicle === 'volvo') {
+                vehicleDisplay = '2021 Volvo XC40 Recharge';
+            } else if (vehicle === 'equinox') {
+                vehicleDisplay = '2024 Chevrolet Equinox EV';
+            } else {
+                vehicleDisplay = 'Unknown Vehicle';
+            }
+            
+            const html = `
+                <div class="status-badge ${isCharging ? 'charging' : 'idle'}">
+                    ${isCharging ? '🔌 Charging' : '⏸️ Idle'}
+                </div>
+                
+                <div class="vehicle-section">
+                    <div class="vehicle-image">
+                        <img src="${vehicleImage}" alt="${vehicleDisplay}">
+                    </div>
+                    <div class="vehicle-name">${vehicleDisplay}</div>
+                    ${confidence > 0 ? `<div class="vehicle-confidence">Classification: ${(confidence * 100).toFixed(0)}% confidence</div>` : ''}
+                </div>
+                
+                <div class="power-section">
+                    <div class="power-label">Current Draw</div>
+                    <div class="power-value">${session.power_kw.toFixed(1)}</div>
+                    <div class="power-unit">kilowatts</div>
+                </div>
+                
+                <div class="info-grid">
+                    <div class="info-card">
+                        <div class="info-label">Energy Added</div>
+                        <div class="info-value">${session.energy_kwh ? session.energy_kwh.toFixed(1) : '—'}</div>
+                    </div>
+                    <div class="info-card">
+                        <div class="info-label">Duration</div>
+                        <div class="info-value">${session.duration_minutes ? Math.round(session.duration_minutes) : '—'}</div>
+                    </div>
+                </div>
+                
+                <button class="refresh-button" onclick="location.reload()">Refresh</button>
+                
+                <div class="last-updated">
+                    Last updated: ${new Date(session.timestamp).toLocaleTimeString()}
+                </div>
+            `;
+            
+            document.getElementById('charging-status').innerHTML = html;
+        }
+        
+        function displayNoData() {
+            document.getElementById('charging-status').innerHTML = `
+                <div class="no-data">
+                    <div class="no-data-icon">🔋</div>
+                    <p>No active charging session</p>
+                    <button class="refresh-button" onclick="location.reload()">Refresh</button>
+                </div>
+            `;
+        }
+        
+        // Load dashboard on page load
+        loadDashboard();
+        
+        // Auto-refresh every 10 seconds
+        setInterval(loadDashboard, 10000);
+    </script>
+</body>
+</html>
