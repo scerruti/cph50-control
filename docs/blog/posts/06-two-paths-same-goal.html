@@ -125,7 +125,7 @@
 
             <h3>The Trajectory: From Cloud to Local</h3>
 
-            <p>I'm already moving in that direction. Recently, I added a SwitchBot relay for garage door control—a small step toward local automation that doesn't depend on cloud polling. Eventually, I'd love to migrate the entire charging automation to Home Assistant instead of relying on Google/GitHub infrastructure.</p>
+            <p>Eventually, I'd love to migrate the entire charging automation to Home Assistant instead of relying on Google/GitHub infrastructure. The appeal is simple: plug things in, and they work. No third-party modules, no API wrapper libraries, no community forum digging.</p>
 
             <p>But here's the thing: <em>right now</em>, the cloud approach solves my problem perfectly. ChargePoint already knows my SDGE rate schedule—I don't have to maintain that logic. Their Energy Price Plan integration handles time-of-use complexity so I don't have to reverse-engineer rate tables or update my code when SDG&E changes pricing tiers.</p>
 
@@ -162,7 +162,7 @@
             <ul>
                 <li><strong>Gains:</strong> Non-invasive, leverages existing charger capabilities (like SDGE rate plan tracking), faster to deploy</li>
                 <li><strong>Costs:</strong> Depends on reverse-engineered endpoints, vendor API uptime, cloud infrastructure reliability</li>
-                <li><strong>Autonomy:</strong> Cloud-dependent (but evolving toward local with Home Assistant + SwitchBot precedent)</li>
+                <li><strong>Autonomy:</strong> Cloud-dependent (but aspiring toward local)</li>
             </ul>
 
             <h2>Why I Haven't Gone Local Yet</h2>
@@ -187,7 +187,7 @@
 
             <ol>
                 <li><strong>Phase 1 (current):</strong> GitHub Actions + ChargePoint API—fully cloud-dependent</li>
-                <li><strong>Phase 2 (in progress):</strong> Add local controls (SwitchBot relay for garage door) alongside cloud automation</li>
+                <li><strong>Phase 2 (future):</strong> Evaluate plug-and-play local hardware options (no community forks, just install and go)</li>
                 <li><strong>Phase 3 (future):</strong> Migrate to Home Assistant for scheduling, but <em>still use ChargePoint's rate plan tracking</em> via their API</li>
                 <li><strong>Phase 4 (aspirational):</strong> Full local control with OpenEVSE hardware retrofit—but only if ChargePoint discontinues their Energy Price Plan or their API becomes unreliable</li>
             </ol>
@@ -211,7 +211,7 @@
 
             <p>It's tempting to claim one approach is superior. The reality: they're optimized for different constraints. Watching Nikki's build validated that DIY energy projects are thriving across hardware and software. It also reinforced my design choice: zero hardware (for now), keep the vendor scheduling, add one precise automation.</p>
 
-            <p>But I won't pretend I've reached the finish line. The SwitchBot relay is proof I'm moving toward local control—one device at a time. Someday, I might open up that CPH50 and swap in OpenEVSE hardware. For now, though, the cloud path gets me 95% of the way there with 5% of the complexity.</p>
+            <p>But I won't pretend I've reached the finish line. Someday, I might find a plug-and-play local solution that doesn't require community support overhead. Or I might open up that CPH50 and swap in OpenEVSE hardware. For now, though, the cloud path gets me 95% of the way there with 5% of the complexity.</p>
 
             <p>And that's a trade-off I'm willing to make. <em>For now.</em></p>
 
