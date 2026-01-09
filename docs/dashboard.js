@@ -118,7 +118,7 @@ function renderSuccessChart(runs) {
             datasets: [{
                 data: [successful, failed],
                 backgroundColor: ['#10b981', '#ef4444'],
-                borderColor: white,
+                borderColor: '#ffffff',
                 borderWidth: 2
             }]
         },
