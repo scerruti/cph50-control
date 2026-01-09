@@ -1,0 +1,225 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>The 6 AM Problem - CPH50 Control Blog</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: #f5f5f5;
+            padding: 20px;
+            color: #333;
+            line-height: 1.8;
+        }
+        .container { max-width: 800px; margin: 0 auto; }
+        header {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 40px 30px;
+            border-radius: 8px;
+            margin-bottom: 30px;
+        }
+        header h1 { margin-bottom: 10px; font-size: 2.5em; }
+        .post-meta {
+            opacity: 0.9;
+            font-size: 0.95em;
+        }
+        nav {
+            background: white;
+            padding: 15px 20px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        nav a {
+            color: #667eea;
+            text-decoration: none;
+            margin-right: 20px;
+            font-weight: 500;
+        }
+        nav a:hover { text-decoration: underline; }
+        article {
+            background: white;
+            padding: 40px;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+            margin-bottom: 20px;
+        }
+        article h2 {
+            color: #667eea;
+            margin: 30px 0 15px 0;
+            font-size: 1.8em;
+        }
+        article h3 {
+            color: #764ba2;
+            margin: 25px 0 10px 0;
+            font-size: 1.4em;
+        }
+        article p { margin-bottom: 15px; }
+        article ul, article ol { margin: 15px 0 15px 30px; }
+        article li { margin-bottom: 8px; }
+        article code {
+            background: #f3f4f6;
+            padding: 2px 6px;
+            border-radius: 3px;
+            font-family: 'Courier New', monospace;
+            font-size: 0.9em;
+        }
+        article pre {
+            background: #1f2937;
+            color: #f9fafb;
+            padding: 20px;
+            border-radius: 4px;
+            overflow-x: auto;
+            margin: 15px 0;
+        }
+        article pre code {
+            background: none;
+            padding: 0;
+            color: inherit;
+        }
+        article blockquote {
+            border-left: 4px solid #667eea;
+            padding-left: 20px;
+            margin: 20px 0;
+            color: #555;
+            font-style: italic;
+        }
+        .tag {
+            display: inline-block;
+            background: #e0e7ff;
+            color: #667eea;
+            padding: 4px 10px;
+            border-radius: 4px;
+            font-size: 0.85em;
+            margin-right: 5px;
+        }
+        .session-data {
+            background: #f9fafb;
+            border: 1px solid #e5e7eb;
+            padding: 15px;
+            border-radius: 4px;
+            margin: 20px 0;
+            font-family: 'Courier New', monospace;
+            font-size: 0.9em;
+        }
+        footer {
+            text-align: center;
+            padding: 20px;
+            color: #666;
+            font-size: 0.9em;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>The 6 AM Problem</h1>
+            <div class="post-meta">
+                📅 January 9, 2026 | 
+                <span class="tag">automation</span>
+                <span class="tag">ev-charging</span>
+                <span class="tag">household</span>
+            </div>
+        </header>
+
+        <nav>
+            <a href="../../index.html">Dashboard</a>
+            <a href="../../label-simple.html">Labeling Portal</a>
+            <a href="../index.html">← Back to Blog</a>
+        </nav>
+
+        <article>
+            <p>"Can you configure the CPH50 to charge past 6 AM?"</p>
+
+            <p>That was the question my wife Susan asked me one morning. Simple enough on the surface, but it kicked off a technical journey that would involve reverse-engineering unofficial APIs, debugging WAF blocks, and building a serverless automation system.</p>
+
+            <p>But first, let me explain why that question mattered.</p>
+
+            <h2>Two EVs, One Household</h2>
+
+            <p>We each drive an electric vehicle. Susan has a 2024 Chevrolet Equinox EV 2LT ("Serenity"), and I drive a 2021 Volvo XC40 Recharge P8. Our weekday charging schedule is straightforward:</p>
+
+            <ul>
+                <li><strong>Susan charges:</strong> Monday and Wednesday</li>
+                <li><strong>I charge:</strong> Tuesday and Thursday</li>
+                <li><strong>Both cars:</strong> Fully charged over the weekend</li>
+            </ul>
+
+            <p>Per manufacturer recommendations, Susan charges to 90% and I charge to 80%. We use a ChargePoint Home Flex (CPH50) connected to our utility's time-of-use rate plan, which schedules charging to stay in the cheapest overnight window.</p>
+
+            <h3>The Morning Shuffle</h3>
+
+            <p>On Tuesday and Friday mornings, I swap Susan's car for mine at around 5 AM. She has a longer commute—from Oceanside to Ramona—while I head to downtown San Diego. The logistics work, but they depend on both vehicles having enough charge to get through their respective days.</p>
+
+            <h2>Winter Changes Everything</h2>
+
+            <p>During winter, range efficiency drops. Heating the cabin, conditioning the battery, and cold-weather driving all take their toll. Here's what a typical Wednesday overnight session looked like for Susan's Equinox:</p>
+
+            <div class="session-data">
+Date: 1/8/2026<br>
+Start: 12:00 AM PST<br>
+End: 6:00 AM PST<br>
+Duration: 5h 59m 59s<br>
+Energy: 51.222 kWh<br>
+Cost: $4.91
+            </div>
+
+            <p>Nearly six hours to recover two days of driving. And she immediately plugged back in after arriving home that morning to add another 1.67 kWh before leaving for work.</p>
+
+            <p>Compare that to my Tuesday session in the Volvo:</p>
+
+            <div class="session-data">
+Date: 1/7/2026<br>
+Start: 12:00 AM PST<br>
+End: 5:09 AM PST<br>
+Duration: 5h 9m 49s<br>
+Energy: 46.75 kWh<br>
+Cost: $4.45
+            </div>
+
+            <p>I charge faster and need less energy for my shorter commute. Five hours is plenty for me. But Susan's Equinox, with its larger battery and longer round-trip, can't fully recover in the overnight window when temperatures drop.</p>
+
+            <h2>Why Not Just Extend the Schedule?</h2>
+
+            <p>The ChargePoint app has a feature I genuinely appreciate: <strong>Energy Price Plan scheduling</strong>. Instead of manually setting start and stop times, you select your utility and rate plan, and the charger automatically schedules charging during the cheapest time-of-use windows.</p>
+
+            <p>This is brilliant for a few reasons:</p>
+
+            <ul>
+                <li><strong>Set it once:</strong> No need to update schedules when rate plans change</li>
+                <li><strong>Handles complexity:</strong> Weekday/weekend differences, seasonal rates, holidays</li>
+                <li><strong>Avoids conflicts:</strong> You shouldn't set schedules in both the car <em>and</em> the charger—pick one</li>
+            </ul>
+
+            <p>But the CPH50's native scheduler has one hard constraint: it stops at the end of the cheap rate window. In our case, that's 6:00 AM. There's no official way to say "keep charging for one more hour if the vehicle needs it."</p>
+
+            <p>I didn't want to disable the Energy Price Plan and manually manage schedules. That would mean maintaining timers, tracking rate changes, and losing the automation we'd come to rely on. What I wanted was to <em>extend</em> the native scheduler, not replace it.</p>
+
+            <h2>The Design Constraint</h2>
+
+            <p>So the requirement became clear:</p>
+
+            <blockquote>
+                Preserve the CPH50's native Energy Price Plan scheduling (midnight to 6 AM). At 6:00 AM on weekdays, automatically send a "start charging" command to extend the session by one hour if needed.
+            </blockquote>
+
+            <p>This way, the charger still respects utility rate schedules, avoids expensive peak hours, and handles all the TOU complexity. We just add a single "tap to continue" at 6 AM.</p>
+
+            <p>Simple in concept. But as I'd soon learn, implementing it would require diving into unofficial APIs, navigating legacy authentication systems, and choosing between a surprisingly diverse set of automation platforms.</p>
+
+            <p>That journey starts in the next post.</p>
+
+            <hr style="margin: 40px 0; border: none; border-top: 1px solid #e5e7eb;">
+
+            <p><em>Next: <strong>Respecting the Rate Plan</strong> – Why the ChargePoint Energy Price Plan scheduling is worth preserving, and how our automation extends it without replacement.</em></p>
+        </article>
+
+        <footer>
+            <p>CPH50 Control Project &copy; 2026 | <a href="https://github.com/scerruti" style="color: #667eea;">@scerruti</a></p>
+        </footer>
+    </div>
+</body>
+</html>
