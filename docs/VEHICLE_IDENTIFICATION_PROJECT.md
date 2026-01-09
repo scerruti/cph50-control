@@ -64,22 +64,20 @@ Different vehicles have distinct charging profiles:
 └─────────────────────────────────────────────────────────┘
 ```
 
-### Phase 2: Manual Labeling (Concurrent with Phase 1)
+### Phase 2: Web-Based Labeling Interface (Concurrent with Phase 1)
 **Goal:** Create training dataset with known vehicle labels
 
-- Users manually label sessions via:
-  - GitHub issue comments
-  - Simple web form
-  - File annotation
-- Store labels in `data/vehicle_labels.json`:
-  ```json
-  {
-    "vehicles": {
-      "vehicle_a": {"name": "Tesla Model 3", "sessions": [123, 456]},
-      "vehicle_b": {"name": "Nissan Leaf", "sessions": [789]}
-    }
-  }
-  ```
+**Web Portal Features:**
+- Display unknown/unlabeled sessions with date, time, and basic stats
+- Dropdown to select vehicle: "Serenity", "Volvo", or "New Vehicle"
+- One-click labeling that updates `session_vehicle_map.json`
+- Real-time statistics showing labeled vs unknown sessions
+- Visual preview of power consumption curve (if available)
+
+**Data Structure:**
+- `data/vehicle_config.json` - Vehicle definitions (name, battery, charge rate, etc.)
+- `data/session_vehicle_map.json` - Session ID → Vehicle ID mapping
+- Unknown sessions tracked separately for easy batch labeling
 
 ### Phase 3: Feature Engineering & Analysis (Week 5-6)
 **Goal:** Extract distinguishing features from charging profiles
@@ -180,13 +178,16 @@ Dashboard shows per-vehicle stats
 - [ ] Add error handling for interrupted sessions
 - [ ] Test: Collect data from 3-5 sessions per vehicle
 
-### Week 5: Manual Labeling System
-- [ ] Create `data/vehicle_labels.json` schema
-- [ ] Create simple labeling workflow:
-  - GitHub issue template for labeling
-  - OR: Simple HTML form in `docs/label.html`
-- [ ] Label 5-10 sessions per vehicle (minimum)
-- [ ] Document vehicle characteristics
+### Week 5: Web-Based Labeling Portal
+- [ ] Create `docs/label.html` - Labeling interface
+  - Display unknown sessions table (date, time, session_id)
+  - Vehicle dropdown (load from `vehicle_config.json`)
+  - "Add New Vehicle" button
+  - Label submission updates `session_vehicle_map.json`
+- [ ] Create `label_session.js` - Client-side logic
+- [ ] Add API endpoint for updating labels (or use GitHub API)
+- [ ] Test: Label 5-10 sessions per vehicle
+- [ ] Document vehicle characteristics based on observed patterns
 
 ### Week 6: Feature Engineering
 - [ ] Create `analyze_sessions.py` script
@@ -272,28 +273,63 @@ Dashboard shows per-vehicle stats
 }
 ```
 
-### `data/vehicle_labels.json`
+### `data/vehicle_config.json`
 ```json
 {
   "vehicles": {
-    "prius_prime_2023": {
-      "name": "2023 Toyota Prius Prime",
-      "nickname": "Prius",
-      "max_charge_rate_kw": 3.3,
-      "battery_capacity_kwh": 13.6,
-      "sessions": [123456, 123789, 124001],
-      "characteristics": "Low power draw, very stable, ramps slowly"
-    },
-    "tesla_model3_2021": {
-      "name": "2021 Tesla Model 3 LR",
-      "nickname": "Tesla",
+    "serenity_equinox_2024": {
+      "name": "2024 Chevrolet Equinox EV 2LT",
+      "nickname": "Serenity",
+      "year": 2024,
+      "make": "Chevrolet",
+      "model": "Equinox EV",
+      "battery_capacity_kwh": 85,
       "max_charge_rate_kw": 11.5,
-      "battery_capacity_kwh": 82,
-      "sessions": [123567, 123890],
-      "characteristics": "High power draw, moderate variance, fast ramp"
+      "color": "#2C5F8D",
+      "characteristics": "Higher power draw, consistent",
+      "icon": "🚙"
+    },
+    "volvo_xc40_2021": {
+      "name": "2021 Volvo XC40 Recharge P8",
+      "nickname": "Volvo",
+      "year": 2021,
+      "make": "Volvo",
+      "model": "XC40 Recharge",
+      "battery_capacity_kwh": 78,
+      "max_charge_rate_kw": 11.0,
+      "color": "#004B87",
+      "characteristics": "Lower power, variable",
+      "icon": "🚗"
+    }
+  }
+}
+```
+
+### `data/session_vehicle_map.json`
+```json
+{
+  "sessions": {
+    "123456": {
+      "vehicle_id": "serenity_equinox_2024",
+      "labeled_at": "2026-01-10T08:30:00Z",
+      "labeled_by": "manual",
+      "confidence": 1.0
+    },
+    "123457": {
+      "vehicle_id": "volvo_xc40_2021",
+      "labeled_at": "2026-01-10T08:31:00Z",
+      "labeled_by": "classifier",
+      "confidence": 0.92
     }
   },
-  "unknown_sessions": [124500, 124600]
+  "unknown_sessions": [123458, 123459],
+  "statistics": {
+    "total_sessions": 4,
+    "labeled_sessions": 2,
+    "serenity_equinox_2024": 1,
+    "volvo_xc40_2021": 1,
+    "unknown": 2
+  }
 }
 ```
 
@@ -411,11 +447,11 @@ Implement session monitoring to start seeing when charging happens, even without
 
 ## Questions to Resolve
 
-1. **How many vehicles** do you have? (Need at least 2 for meaningful classification)
+1. ✅ **How many vehicles** do you have? → **2 vehicles: Serenity (2024 Equinox EV) and Volvo XC40 P8 (2021)**
 2. **Typical charging frequency** per vehicle? (Affects data collection timeline)
-3. **Preference for labeling method**? (GitHub issues, web form, or direct file edit)
+3. ✅ **Preference for labeling method**? → **Web portal with dropdown + unknown sessions list**
 4. **Dashboard priorities**? (Total cost per vehicle, kWh per vehicle, session count, etc.)
-5. **ML preference**? (Simple rules vs full ML model - depends on complexity)
+5. **ML preference**? → **Likely simple rules will work given visually distinct patterns**
 
 ---
 
