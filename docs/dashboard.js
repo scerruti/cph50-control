@@ -36,7 +36,10 @@ function renderSummary(runs) {
     const total = runs.length;
     const successful = runs.filter(r => r.result === 'success').length;
     const failed = runs.filter(r => r.result === 'failure').length;
-    const successRate = total > 0 ? ((successful / total) * 100).toFixed(1) : 0;
+    const other = runs.filter(r => r.result === 'other').length;
+    const other = runs.filter(r => r.result === 'other').length;
+    const effective = Math.max(1, successful + failed); // avoid divide-by-zero; treat "other" as neutral
+    const successRate = ((successful / effective) * 100).toFixed(1);
     
     // Latest run
     const latest = runs[0];
@@ -63,6 +66,7 @@ function renderSummary(runs) {
             <div class="card">
                 <h3>Failures</h3>
                 <div class="value failure">${failed}</div>
+                <small>${other} other</small>
             </div>
             <div class="card">
                 <h3>Latest Run</h3>
@@ -112,10 +116,10 @@ function renderSuccessChart(runs) {
     new Chart(ctx, {
         type: 'doughnut',
         data: {
-            labels: ['Success', 'Failure'],
+            labels: ['Success', 'Failure', 'Other'],
             datasets: [{
-                data: [successful, failed],
-                backgroundColor: ['#10b981', '#ef4444'],
+                data: [successful, failed, other],
+                backgroundColor: ['#10b981', '#ef4444', '#9ca3af'],
                 borderColor: '#ffffff',
                 borderWidth: 2
             }]

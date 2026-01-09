@@ -17,7 +17,11 @@ from python_chargepoint.exceptions import ChargePointCommunicationException
 
 
 def record_run_result(result, reason, polling_duration_sec=0, run_type="scheduled"):
-    """Append charging run result to data/runs.json and commit to repo."""
+    """Append charging run result to data/runs.json and commit to repo.
+
+    result: "success" | "failure" | "other"
+    run_type: "scheduled" | "manual-start" | "manual-scheduled"
+    """
     pacific = ZoneInfo("America/Los_Angeles")
     now_utc = datetime.now(ZoneInfo('UTC'))
     now_pt = datetime.now(pacific)
@@ -27,7 +31,7 @@ def record_run_result(result, reason, polling_duration_sec=0, run_type="schedule
         "date": now_pt.strftime("%Y-%m-%d"),
         "time_utc": now_utc.strftime("%H:%M:%S"),
         "time_pt": now_pt.strftime("%H:%M:%S"),
-        "result": result,  # "success" or "failure"
+        "result": result,
         "start_time_pt": now_pt.strftime("%H:%M:%S"),
         "polling_duration_sec": polling_duration_sec,
         "reason": reason,
@@ -131,7 +135,10 @@ def wait_for_scheduled_charging_to_end(client, charger_id):
 
 
 def charge(wait_for_schedule=True):
-    """Main charging logic. If wait_for_schedule is True, respect 5:50–6:05 PT window."""
+    """Main charging logic. If wait_for_schedule is True, respect 5:50–6:05 PT window.
+
+    Returns tuple (status, reason) where status ∈ {"success", "failure", "other"}.
+    """
     pacific = ZoneInfo("America/Los_Angeles")
     username = os.environ.get("CP_USERNAME")
     password = os.environ.get("CP_PASSWORD")
@@ -154,7 +161,7 @@ def charge(wait_for_schedule=True):
         
         if not chargers:
             print("❌ ERROR: No home chargers found")
-            return False, "No home chargers found"
+            return "failure", "No home chargers found"
         
         charger_id = chargers[0]
         print(f"✓ Found charger: {charger_id}")
@@ -168,22 +175,22 @@ def charge(wait_for_schedule=True):
         
         if not status.connected:
             print("⚠️  Charger is offline - cannot start charging")
-            return False, "Charger offline"
+            return "failure", "Charger offline"
         
         if not status.plugged_in:
             print("ℹ️  No vehicle plugged in - nothing to do")
-            return True, "No vehicle plugged in"
+            return "other", "No vehicle plugged in"
         
         # Step 2: Optional polling window for scheduled charging end
         if wait_for_schedule:
             if not wait_for_scheduled_charging_to_end(client, charger_id):
-                return False, "Wait for scheduled charging failed"
+                return "failure", "Wait for scheduled charging failed"
         
         # Verify car still plugged after polling window
         status = client.get_home_charger_status(charger_id)
         if not status.plugged_in:
             print("ℹ️  Vehicle unplugged after polling window - exiting")
-            return True, "Vehicle unplugged during polling"
+            return "other", "Vehicle unplugged during polling"
         
         if status.charging_status == "CHARGING":
             print("⚠️  WARNING: Scheduled charging still active after 6:05 PT window")
@@ -201,7 +208,7 @@ def charge(wait_for_schedule=True):
                 client.start_charging_session(station_id)
                 success_time = datetime.now(pacific).strftime("%H:%M:%S")
                 print(f"✅ SUCCESS: Charging session started at {success_time} PT!")
-                return True, "Charging session started successfully"
+                return "success", "Charging session started successfully"
                 
             except ChargePointCommunicationException as timeout_error:
                 if "failed to start in time allotted" in str(timeout_error).lower():
@@ -226,12 +233,12 @@ def charge(wait_for_schedule=True):
                     # Check car still plugged
                     if not status.plugged_in:
                         print("ℹ️  Vehicle unplugged - exiting")
-                        return True, "Vehicle unplugged before charging"
+                        return "other", "Vehicle unplugged before charging"
                     
                     # Check if charging actually started
                     if status.charging_status == "CHARGING":
                         print(f"✅ Charging confirmed active at {datetime.now(pacific).strftime('%H:%M:%S')} PT (timeout was false alarm)")
-                        return True, "Charging confirmed (false alarm timeout)"
+                        return "success", "Charging confirmed (false alarm timeout)"
                     
                     # Not charging yet, retry if attempts remain
                     if retry < 3:
@@ -239,18 +246,18 @@ def charge(wait_for_schedule=True):
                         continue
                     else:
                         print("❌ ERROR: 3 attempts failed, charging not confirmed")
-                        return False, "Failed to confirm charging after 3 attempts"
+                        return "failure", "Failed to confirm charging after 3 attempts"
                 else:
                     raise  # Other communication errors
         
     except ChargePointCommunicationException as e:
         print(f"❌ ERROR: ChargePoint API communication failed")
         print(f"   {str(e)}")
-        return False, f"API error: {str(e)[:50]}"
+        return "failure", f"API error: {str(e)[:50]}"
     except Exception as e:
         print(f"❌ ERROR: Unexpected error occurred")
         print(f"   {type(e).__name__}: {str(e)}")
-        return False, f"Unexpected error: {str(e)[:50]}"
+        return "failure", f"Unexpected error: {str(e)[:50]}"
 
 
 def main():
@@ -284,19 +291,25 @@ def main():
         print("🎯 Manual start mode - skipping scheduled charging window")
     
     # Attempt to charge
-    success, reason = charge(wait_for_schedule=wait_for_schedule)
-    
-    if success:
+    status, reason = charge(wait_for_schedule=wait_for_schedule)
+
+    if status == "success":
         print("=" * 60)
         print("✅ Charging automation completed successfully")
         print("=" * 60)
-        record_run_result("success", reason, run_type=run_type)
+        record_run_result(status, reason, run_type=run_type)
+        sys.exit(0)
+    elif status == "other":
+        print("=" * 60)
+        print("ℹ️  Charging automation ended with neutral status")
+        print("=" * 60)
+        record_run_result(status, reason, run_type=run_type)
         sys.exit(0)
     else:
         print("=" * 60)
         print("❌ Charging automation failed - see errors above")
         print("=" * 60)
-        record_run_result("failure", reason, run_type=run_type)
+        record_run_result(status, reason, run_type=run_type)
         sys.exit(1)
 
 
