@@ -1,0 +1,128 @@
+name: Weekly Charging Report
+
+on:
+  schedule:
+    # Sundays at 8 AM PT (16:00 UTC)
+    - cron: '0 16 * * 0'
+  workflow_dispatch: # Manual trigger for testing
+
+jobs:
+  report:
+    runs-on: ubuntu-latest
+    
+    steps:
+    - name: Checkout repository
+      uses: actions/checkout@v4
+      with:
+        fetch-depth: 0
+    
+    - name: Set up Python
+      uses: actions/setup-python@v5
+      with:
+        python-version: '3.12'
+    
+    - name: Install dependencies
+      run: pip install requests
+    
+    - name: Generate weekly report
+      env:
+        GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      run: python -c "
+import json
+import subprocess
+from datetime import datetime, timedelta
+from zoneinfo import ZoneInfo
+
+pacific = ZoneInfo('America/Los_Angeles')
+
+# Get all charge-ev runs from past 7 days
+cmd = 'gh run list --workflow charge-ev.yml --limit 100 --json databaseId,createdAt,conclusion,status'
+result = subprocess.run(cmd.split(), capture_output=True, text=True)
+runs = json.loads(result.stdout)
+
+new_records = []
+cutoff = datetime.now(pacific) - timedelta(days=7)
+
+for run in runs:
+    try:
+        run_date = datetime.fromisoformat(run['createdAt'].replace('Z', '+00:00')).astimezone(pacific)
+        if run_date < cutoff:
+            break
+        
+        # Fetch full log
+        log_cmd = f'gh run view {run[\"databaseId\"]} --log'
+        log_result = subprocess.run(log_cmd.split(), capture_output=True, text=True)
+        log_text = log_result.stdout
+        
+        # Parse log for key info
+        result_status = run['conclusion']
+        start_time_pt = 'N/A'
+        polling_duration = 0
+        reason = ''
+        
+        if 'SUCCESS: Charging session started' in log_text:
+            reason = 'Charging started successfully'
+            # Extract timestamp
+            for line in log_text.split('\\n'):
+                if 'Start time:' in line:
+                    start_time_pt = line.split('Start time:')[1].strip()
+        elif 'Charger is offline' in log_text:
+            reason = 'Charger offline'
+        elif 'No vehicle plugged in' in log_text:
+            reason = 'No vehicle plugged in'
+        elif 'Scheduled charging still active' in log_text:
+            reason = 'Scheduled charging still active after window'
+        elif 'Timeout' in log_text and 'Charging confirmed' in log_text:
+            reason = 'Timeout but charging confirmed'
+        else:
+            reason = result_status
+        
+        record = {
+            'run_id': str(run['databaseId']),
+            'date': run_date.strftime('%Y-%m-%d'),
+            'time_utc': run_date.astimezone(ZoneInfo('UTC')).strftime('%H:%M:%S'),
+            'time_pt': run_date.strftime('%H:%M:%S'),
+            'result': result_status,
+            'start_time_pt': start_time_pt,
+            'polling_duration_sec': polling_duration,
+            'reason': reason,
+            'details': ''
+        }
+        new_records.append(record)
+    except Exception as e:
+        print(f'Error processing run {run.get(\"databaseId\")}: {e}')
+
+# Load existing data
+try:
+    with open('data/runs.json') as f:
+        data = json.load(f)
+except:
+    data = {'runs': []}
+
+# Append new records (avoid duplicates)
+existing_ids = {r['run_id'] for r in data['runs']}
+for record in new_records:
+    if record['run_id'] not in existing_ids:
+        data['runs'].insert(0, record)  # Insert at top (newest first)
+
+# Keep last 52 weeks
+data['runs'] = data['runs'][:520]
+
+# Save
+with open('data/runs.json', 'w') as f:
+    json.dump(data, f, indent=2)
+
+print(f'Updated {len(new_records)} new runs')
+"
+    
+    - name: Commit and push
+      run: |
+        git config user.name 'GitHub Actions'
+        git config user.email 'actions@github.com'
+        git add data/runs.json
+        if git diff --cached --quiet; then
+          echo 'No changes to commit'
+        else
+          git commit -m 'Update weekly charging report data'
+          git push
+        fi
