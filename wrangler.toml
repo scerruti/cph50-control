@@ -1,6 +1,7 @@
 name = "cph50-control-worker"
 main = "src/index.ts"
 compatibility_date = "2026-01-08"
+account_id = "d0280721547ca176289d6e57dfcc6a95"
 
 [triggers]
 crons = ["0 13,14 * * *"]
