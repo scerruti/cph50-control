@@ -1,16 +1,29 @@
 // Load and render dashboard
 async function initDashboard() {
     try {
-        const response = await fetch('https://raw.githubusercontent.com/scerruti/cph50-control/main/data/runs.json');
-        const data = await response.json();
+        // Add cache-busting parameter to get fresh data
+        const timestamp = new Date().getTime();
+        const response = await fetch(`https://raw.githubusercontent.com/scerruti/cph50-control/main/data/runs.json?t=${timestamp}`);
+        
+        if (!response.ok) {
+            throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+        }
+        
+        const text = await response.text();
+        const data = JSON.parse(text);
         const runs = data.runs || [];
         
         renderSummary(runs);
         renderCharts(runs);
         renderTable(runs);
     } catch (error) {
+        console.error('Dashboard error:', error);
         document.getElementById('content').innerHTML = `
-            <p style="color: red;">Error loading dashboard: ${error.message}</p>
+            <div style="padding: 40px; text-align: center;">
+                <p style="color: #e74c3c; font-size: 1.2em; margin-bottom: 10px;">⚠️ Error loading dashboard</p>
+                <p style="color: #666; margin-bottom: 20px;">${error.message}</p>
+                <p style="color: #999; font-size: 0.9em;">The data file may not exist yet. Run a charging session to populate data.</p>
+            </div>
         `;
     }
 }
