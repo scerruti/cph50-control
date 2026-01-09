@@ -131,9 +131,8 @@ def monitor():
             }
             save_current_session(current_session_id, status_info)
             
-            # Trigger data collection (will be created in next step)
-            # trigger_data_collection(current_session_id)
-            print("ℹ️  Data collection workflow not yet implemented")
+            # Trigger data collection
+            trigger_data_collection(current_session_id)
             
         elif current_session_id == last_session_id:
             print(f"✓ Same session continuing: {current_session_id}")
