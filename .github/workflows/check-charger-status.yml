@@ -67,19 +67,20 @@ jobs:
                 print(f"  Model:          {status.model}")
                 print(f"  Connected:      {status.connected} {'✅' if status.connected else '❌'}")
                 print(f"  Plugged In:     {status.plugged_in} {'✅' if status.plugged_in else '❌'}")
+                print(f"  Charging Status: {status.charging_status}")
                 print(f"  Last Connected: {status.last_connected_at}")
                 
                 if hasattr(status, 'port_number'):
                     print(f"  Port Number:    {status.port_number}")
                 if hasattr(status, 'mac_address'):
                     print(f"  MAC Address:    {status.mac_address}")
-                if hasattr(status, 'status'):
-                    print(f"  Status:         {status.status}")
                 
                 print()
                 
-                if status.connected and status.plugged_in:
-                    print("✅ Charger is READY to charge")
+                if status.charging_status == "CHARGING":
+                    print("⚡ Charger is ACTIVELY CHARGING")
+                elif status.connected and status.plugged_in:
+                    print("✅ Charger is READY to charge (vehicle plugged in, not charging)")
                 elif status.connected and not status.plugged_in:
                     print("⚠️  Charger is online but NO VEHICLE plugged in")
                 elif not status.connected:

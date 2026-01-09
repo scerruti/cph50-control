@@ -69,6 +69,7 @@ jobs:
             print(f"📊 Charger Status:")
             print(f"   Connected: {status.connected} {'✅' if status.connected else '❌'}")
             print(f"   Plugged In: {status.plugged_in} {'✅' if status.plugged_in else '❌'}")
+            print(f"   Charging Status: {status.charging_status}")
             print(f"   Model: {status.model}")
             print(f"   Last Connected: {status.last_connected_at}\n")
             
@@ -81,6 +82,10 @@ jobs:
                 print("⚠️  WARNING: No vehicle plugged in")
                 print("   Charging cannot start until vehicle is connected")
                 exit(1)
+            
+            if status.charging_status == "CHARGING":
+                print("ℹ️  Vehicle is already charging - no need to start")
+                exit(0)
             
             # Start charging session
             print(f"⚡ Starting charging session for station {station_id}...")
