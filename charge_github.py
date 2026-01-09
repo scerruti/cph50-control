@@ -129,7 +129,7 @@ def wait_for_scheduled_charging_to_end(client, charger_id):
 
 
 def charge():
-    """Main charging logic with wait-for-scheduled-charging-to-end. Returns True on success, False on failure."""
+    """Main charging logic with wait-for-scheduled-charging-to-end. Returns tuple (success, reason)."""
     username = os.environ.get("CP_USERNAME")
     password = os.environ.get("CP_PASSWORD")
     station_id = os.environ.get("CP_STATION_ID")
@@ -137,7 +137,7 @@ def charge():
     if not all([username, password, station_id]):
         print("❌ ERROR: Missing required environment variables")
         print("   Required: CP_USERNAME, CP_PASSWORD, CP_STATION_ID")
-        return False
+        return False, "Missing environment variables"
     
     try:
         # Authenticate
@@ -151,7 +151,7 @@ def charge():
         
         if not chargers:
             print("❌ ERROR: No home chargers found")
-            return False
+            return False, "No home chargers found"
         
         charger_id = chargers[0]
         print(f"✓ Found charger: {charger_id}")
@@ -165,21 +165,21 @@ def charge():
         
         if not status.connected:
             print("⚠️  Charger is offline - cannot start charging")
-            return False  # Fail so GitHub sends alert email
+            return False, "Charger offline"
         
         if not status.plugged_in:
             print("ℹ️  No vehicle plugged in - nothing to do")
-            return True  # Success: nothing wrong, just nothing to charge
+            return True, "No vehicle plugged in"
         
         # Step 2: Poll for scheduled charging to end (5:50–6:05 PT window, clock-drift resistant)
         if not wait_for_scheduled_charging_to_end(client, charger_id):
-            return False
+            return False, "Wait for scheduled charging failed"
         
         # Verify car still plugged after polling window
         status = client.get_home_charger_status(charger_id)
         if not status.plugged_in:
             print("ℹ️  Vehicle unplugged after polling window - exiting")
-            return True
+            return True, "Vehicle unplugged during polling"
         
         if status.charging_status == "CHARGING":
             print("⚠️  WARNING: Scheduled charging still active after 6:05 PT window")
@@ -197,7 +197,7 @@ def charge():
                 client.start_charging_session(station_id)
                 success_time = datetime.now(pacific).strftime("%H:%M:%S")
                 print(f"✅ SUCCESS: Charging session started at {success_time} PT!")
-                return True
+                return True, "Charging session started successfully"
                 
             except ChargePointCommunicationException as timeout_error:
                 if "failed to start in time allotted" in str(timeout_error).lower():
@@ -217,17 +217,17 @@ def charge():
                             continue
                         else:
                             print("❌ ERROR: All retries exhausted and cannot confirm charging")
-                            return False
+                            return False, "All retry attempts failed"
                     
                     # Check car still plugged
                     if not status.plugged_in:
                         print("ℹ️  Vehicle unplugged - exiting")
-                        return True
+                        return True, "Vehicle unplugged before charging"
                     
                     # Check if charging actually started
                     if status.charging_status == "CHARGING":
                         print(f"✅ Charging confirmed active at {datetime.now(pacific).strftime('%H:%M:%S')} PT (timeout was false alarm)")
-                        return True
+                        return True, "Charging confirmed (false alarm timeout)"
                     
                     # Not charging yet, retry if attempts remain
                     if retry < 3:
@@ -235,18 +235,18 @@ def charge():
                         continue
                     else:
                         print("❌ ERROR: 3 attempts failed, charging not confirmed")
-                        return False
+                        return False, "Failed to confirm charging after 3 attempts"
                 else:
                     raise  # Other communication errors
         
     except ChargePointCommunicationException as e:
         print(f"❌ ERROR: ChargePoint API communication failed")
         print(f"   {str(e)}")
-        return False
+        return False, f"API error: {str(e)[:50]}"
     except Exception as e:
         print(f"❌ ERROR: Unexpected error occurred")
         print(f"   {type(e).__name__}: {str(e)}")
-        return False
+        return False, f"Unexpected error: {str(e)[:50]}"
 
 
 def main():
@@ -270,19 +270,19 @@ def main():
     print("🎯 Within charging window, proceeding...")
     
     # Attempt to charge
-    success = charge()
+    success, reason = charge()
     
     if success:
         print("=" * 60)
         print("✅ Charging automation completed successfully")
         print("=" * 60)
-        record_run_result("success", "Charging session started successfully")
+        record_run_result("success", reason)
         sys.exit(0)
     else:
         print("=" * 60)
         print("❌ Charging automation failed - see errors above")
         print("=" * 60)
-        record_run_result("failure", "Charging session failed - see logs")
+        record_run_result("failure", reason)
         sys.exit(1)
 
 

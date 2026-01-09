@@ -1,7 +1,7 @@
 // Load and render dashboard
 async function initDashboard() {
     try {
-        const response = await fetch('../data/runs.json');
+        const response = await fetch('https://raw.githubusercontent.com/scerruti/cph50-control/main/data/runs.json');
         const data = await response.json();
         const runs = data.runs || [];
         
@@ -17,7 +17,7 @@ async function initDashboard() {
 
 function renderSummary(runs) {
     if (runs.length === 0) {
-        document.getElementById('content').innerHTML = '<p>No data yet. Reports will appear after the first weekly run.</p>';
+        document.getElementById('content').innerHTML = '<p>No data yet. Reports will appear after the first charging run.</p>';
         return;
     }
     
@@ -41,7 +41,7 @@ function renderSummary(runs) {
     const html = `
         <div class="summary">
             <div class="card">
-                <h3>Total Runs (7 days)</h3>
+                <h3>Total Runs</h3>
                 <div class="value">${total}</div>
             </div>
             <div class="card">
