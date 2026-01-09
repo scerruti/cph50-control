@@ -4,6 +4,7 @@ GitHub Actions EV Charging Automation
 Runs on cron schedule to start charging at 6 AM PST/PDT
 """
 
+import argparse
 import os
 import sys
 import time
@@ -15,7 +16,7 @@ from python_chargepoint import ChargePoint
 from python_chargepoint.exceptions import ChargePointCommunicationException
 
 
-def record_run_result(result, reason, polling_duration_sec=0):
+def record_run_result(result, reason, polling_duration_sec=0, run_type="scheduled"):
     """Append charging run result to data/runs.json and commit to repo."""
     pacific = ZoneInfo("America/Los_Angeles")
     now_utc = datetime.now(ZoneInfo('UTC'))
@@ -30,7 +31,8 @@ def record_run_result(result, reason, polling_duration_sec=0):
         "start_time_pt": now_pt.strftime("%H:%M:%S"),
         "polling_duration_sec": polling_duration_sec,
         "reason": reason,
-        "details": ""
+        "details": "",
+        "run_type": run_type
     }
     
     data_file = "data/runs.json"
@@ -128,8 +130,9 @@ def wait_for_scheduled_charging_to_end(client, charger_id):
     return True
 
 
-def charge():
-    """Main charging logic with wait-for-scheduled-charging-to-end. Returns tuple (success, reason)."""
+def charge(wait_for_schedule=True):
+    """Main charging logic. If wait_for_schedule is True, respect 5:50–6:05 PT window."""
+    pacific = ZoneInfo("America/Los_Angeles")
     username = os.environ.get("CP_USERNAME")
     password = os.environ.get("CP_PASSWORD")
     station_id = os.environ.get("CP_STATION_ID")
@@ -171,9 +174,10 @@ def charge():
             print("ℹ️  No vehicle plugged in - nothing to do")
             return True, "No vehicle plugged in"
         
-        # Step 2: Poll for scheduled charging to end (5:50–6:05 PT window, clock-drift resistant)
-        if not wait_for_scheduled_charging_to_end(client, charger_id):
-            return False, "Wait for scheduled charging failed"
+        # Step 2: Optional polling window for scheduled charging end
+        if wait_for_schedule:
+            if not wait_for_scheduled_charging_to_end(client, charger_id):
+                return False, "Wait for scheduled charging failed"
         
         # Verify car still plugged after polling window
         status = client.get_home_charger_status(charger_id)
@@ -251,6 +255,13 @@ def charge():
 
 def main():
     """Entry point for GitHub Actions."""
+    parser = argparse.ArgumentParser(description="ChargePoint automation")
+    parser.add_argument("--mode", choices=["scheduled", "manual-start", "manual-scheduled"], default="scheduled",
+                        help="scheduled: normal 6 AM flow; manual-start: start immediately; manual-scheduled: run scheduled flow on-demand")
+    args = parser.parse_args()
+    mode = args.mode
+    wait_for_schedule = mode != "manual-start"
+    run_type = mode
     print("=" * 60)
     print("EV Charging Automation - GitHub Actions")
     utc_time = datetime.now(ZoneInfo('UTC')).strftime('%Y-%m-%d %H:%M:%S %Z')
@@ -259,30 +270,33 @@ def main():
     print(f"Run Time (PT):   {local_time}")
     print("=" * 60)
     
-    # Check if past charging window
+    # Check if past charging window (only for scheduled modes)
     pacific = ZoneInfo("America/Los_Angeles")
     now = datetime.now(pacific)
-    if now.hour > 6:
+    if wait_for_schedule and now.hour > 6:
         print(f"ℹ️  Past charging window (current hour: {now.hour}, target: 5:50–6:05) - exiting")
-        record_run_result("success", "Skipped: past charging window")
+        record_run_result("success", "Skipped: past charging window", run_type=run_type)
         sys.exit(0)
     
-    print("🎯 Within charging window, proceeding...")
+    if wait_for_schedule:
+        print("🎯 Within charging window, proceeding...")
+    else:
+        print("🎯 Manual start mode - skipping scheduled charging window")
     
     # Attempt to charge
-    success, reason = charge()
+    success, reason = charge(wait_for_schedule=wait_for_schedule)
     
     if success:
         print("=" * 60)
         print("✅ Charging automation completed successfully")
         print("=" * 60)
-        record_run_result("success", reason)
+        record_run_result("success", reason, run_type=run_type)
         sys.exit(0)
     else:
         print("=" * 60)
         print("❌ Charging automation failed - see errors above")
         print("=" * 60)
-        record_run_result("failure", reason)
+        record_run_result("failure", reason, run_type=run_type)
         sys.exit(1)
 
 
