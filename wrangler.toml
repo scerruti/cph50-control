@@ -1,0 +1,6 @@
+name = "cph50-control-worker"
+main = "src/index.ts"
+compatibility_date = "2026-01-08"
+
+[triggers]
+crons = ["0 13,14 * * *"]

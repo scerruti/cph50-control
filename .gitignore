@@ -1,0 +1,33 @@
+# Python
+test_env/
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+*.egg-info/
+dist/
+build/
+
+# Environment variables (never commit secrets!)
+.env
+.env.local
+
+# ChargePoint cookies and session data
+cp_cookies.txt
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# macOS
+.DS_Store
+
+# Cloudflare (deprecated, keeping for reference)
+.wrangler/
+node_modules/
+
+# Fly.io (deprecated)
+fly.toml
