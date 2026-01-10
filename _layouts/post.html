@@ -19,12 +19,12 @@ layout: default
 
     {% if page.prev %}
         <p style="text-align: left; margin-bottom: 20px;">
-            <strong>← Previous:</strong> <a href="{{ page.prev.url }}" style="color: #667eea;">{{ page.prev.title }}</a>
+            <strong>← Previous:</strong> <a href="{{ site.baseurl }}{{ page.prev.url }}" style="color: #667eea;">{{ page.prev.title }}</a>
         </p>
     {% endif %}
     {% if page.next %}
         <p style="text-align: right; margin-bottom: 20px;">
-            <strong>Next:</strong> <a href="{{ page.next.url }}" style="color: #667eea;">{{ page.next.title }}</a> →
+            <strong>Next:</strong> <a href="{{ site.baseurl }}{{ page.next.url }}" style="color: #667eea;">{{ page.next.title }}</a> →
         </p>
     {% endif %}
 

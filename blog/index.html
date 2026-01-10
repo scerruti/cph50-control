@@ -11,7 +11,7 @@ permalink: /blog/
 {% for post in site.posts reversed %}
     <article style="background: white; padding: 30px; border-radius: 8px; margin-bottom: 20px; box-shadow: 0 2px 4px rgba(0,0,0,0.1); transition: transform 0.2s, box-shadow 0.2s;" onmouseover="this.style.transform='translateY(-2px)'; this.style.boxShadow='0 4px 8px rgba(0,0,0,0.15)';" onmouseout="this.style.transform='translateY(0)'; this.style.boxShadow='0 2px 4px rgba(0,0,0,0.1)';">
         <h3 style="color: #667eea; margin-bottom: 10px; font-size: 1.5em;">
-            <a href="{{ post.url }}" style="color: #667eea; text-decoration: none;">{{ post.title }}</a>
+            <a href="{{ site.baseurl }}{{ post.url }}" style="color: #667eea; text-decoration: none;">{{ post.title }}</a>
         </h3>
         <div style="color: #666; font-size: 0.9em; margin-bottom: 15px;">
             📅 {{ post.date | date: "%B %d, %Y" }}
@@ -20,6 +20,6 @@ permalink: /blog/
             {% endif %}
         </div>
         <p style="color: #555; margin-bottom: 15px;">{{ post.excerpt }}</p>
-        <a href="{{ post.url }}" style="color: #667eea; text-decoration: none; font-weight: 500;">Read more →</a>
+        <a href="{{ site.baseurl }}{{ post.url }}" style="color: #667eea; text-decoration: none; font-weight: 500;">Read more →</a>
     </article>
 {% endfor %}
