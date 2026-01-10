@@ -195,7 +195,10 @@ def monitor():
                 # Attempt to annotate vehicle from known labels or collected data
                 try:
                     # Prefer collected session data (classifier output)
-                    data_path = os.path.join("data", "sessions", f"{current_session_id}.json")
+                    # Check in date-based directory structure
+                    start_time_utc = datetime.now(ZoneInfo('UTC'))
+                    date_path = start_time_utc.strftime('%Y/%m/%d')
+                    data_path = os.path.join("data", "sessions", date_path, f"{current_session_id}.json")
                     if os.path.exists(data_path):
                         with open(data_path, "r") as f:
                             collected = json.load(f)

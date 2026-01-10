@@ -128,9 +128,12 @@ def collect_session_data(session_id):
             print(f"   Variance: {variance:.4f}")
             print()
         
-        # Save to file
-        os.makedirs("data/sessions", exist_ok=True)
-        output_file = f"data/sessions/{session_id}.json"
+        # Save to file in date-based directory structure
+        # Extract start date from collection_start timestamp
+        start_date = start_time.strftime('%Y/%m/%d')
+        session_dir = f"data/sessions/{start_date}"
+        os.makedirs(session_dir, exist_ok=True)
+        output_file = f"{session_dir}/{session_id}.json"
         
         output_data = {
             "session_id": session_id,
