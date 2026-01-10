@@ -176,8 +176,10 @@ permalink: /
 <script src="{{ '/assets/js/dashboard.js' | relative_url }}"></script>
 <script>
     const VEHICLE_IMAGES = {
+        'volvo': '{{ "/images/volvo.png" | relative_url }}',
         'volvo_xc40_2021': '{{ "/images/volvo.png" | relative_url }}',
         'serenity_equinox_2024': '{{ "/images/equinox.png" | relative_url }}',
+        'equinox': '{{ "/images/equinox.png" | relative_url }}',
         'unknown': '{{ "/images/unknown.svg" | relative_url }}'
     };
 
@@ -207,11 +209,11 @@ permalink: /
         const vehicleImage = VEHICLE_IMAGES[vehicleId] || VEHICLE_IMAGES['unknown'];
         
         let vehicleDisplay = 'Unknown Vehicle';
-        if (vehicleId === 'volvo_xc40_2021') vehicleDisplay = '2021 Volvo XC40 Recharge';
-        else if (vehicleId === 'serenity_equinox_2024') vehicleDisplay = '2024 Chevy Equinox EV';
+        if (vehicleId === 'volvo' || vehicleId === 'volvo_xc40_2021') vehicleDisplay = '2021 Volvo XC40 Recharge';
+        else if (vehicleId === 'equinox' || vehicleId === 'serenity_equinox_2024') vehicleDisplay = '2024 Chevy Equinox EV';
 
         const confidence = session.vehicle_confidence || 0;
-        const powerValue = session.power_kw ? session.power_kw.toFixed(1) : '—';
+        const powerValue = session.power_kw !== null && session.power_kw !== undefined ? session.power_kw.toFixed(1) : '—';
         const energyValue = session.energy_kwh ? session.energy_kwh.toFixed(1) + ' kWh' : '—';
         const durationValue = session.duration_minutes ? Math.round(session.duration_minutes) + ' min' : '—';
         const lastUpdated = session.timestamp || session.detected_at || null;

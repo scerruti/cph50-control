@@ -75,3 +75,33 @@ permalink: /history/
 </div>
 
 <p style="text-align: center; color: #666; margin-top: 40px;">Historical data dashboard. Data is populated from completed charging sessions.</p>
+
+<script>
+    async function loadHistory() {
+        try {
+            const response = await fetch('https://raw.githubusercontent.com/scerruti/cph50-control/main/data/runs.json?t=' + Date.now());
+            if (!response.ok) throw new Error('Failed to fetch historical data');
+            const data = await response.json();
+            
+            if (!data.runs || data.runs.length === 0) {
+                document.querySelector('p').innerHTML = 'No historical data yet. Data is populated from completed charging sessions.';
+                return;
+            }
+            
+            const runs = data.runs;
+            const totalSessions = runs.length;
+            const totalEnergy = (runs.reduce((sum, r) => sum + (r.energy_kwh || 0), 0)).toFixed(1);
+            const avgCost = runs.length > 0 ? (runs.reduce((sum, r) => sum + (r.cost || 0), 0) / runs.length).toFixed(2) : '0.00';
+            
+            document.getElementById('total-sessions').textContent = totalSessions;
+            document.getElementById('total-energy').textContent = totalEnergy + ' kWh';
+            document.getElementById('avg-cost').textContent = '$' + avgCost;
+            
+        } catch (error) {
+            console.error('History error:', error);
+            document.querySelector('p').innerHTML = 'Unable to load historical data. Please try again later.';
+        }
+    }
+    
+    loadHistory();
+</script>
