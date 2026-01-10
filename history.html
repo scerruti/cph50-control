@@ -423,7 +423,7 @@ permalink: /history/
 
         // 1. Sort by start time (Oldest -> Newest)
         allSessions.sort((a, b) => new Date(a.startTime) - new Date(b.startTime));
-        
+
         // 2. ONE-TIME DATA FIX: Handle missing end times
         if (allSessions.length > 0) {
             // Identify the timestamp of the latest session
@@ -435,8 +435,8 @@ permalink: /history/
                 if (!s.endTime) {
                     if (s.startTime.getTime() === latestStartTime) {
                         // CASE A: It is the latest session -> It is ACTIVE
-                        s.endTime = new Date(); 
-                        s.isActive = true; 
+                        s.endTime = new Date();
+                        s.isActive = true;
                         s.duration = Math.round((s.endTime - s.startTime) / 1000 / 60);
                     } else {
                         // CASE B: It is an old session -> It is BROKEN (Zombie)
@@ -445,7 +445,7 @@ permalink: /history/
                         s.isZombie = true;
                         s.duration = 0; // 0 minutes duration
                     }
-                    
+
                     // Update derived field for display
                     s.localEndTime = convertToLocalTime(s.endTime);
                 }
@@ -886,14 +886,16 @@ permalink: /history/
             let rowStyle = '';
 
             if (s.isActive) {
-                durationDisplay = `<span style="color:#228B22; font-weight:bold">${s.duration} min (Active)</span>`;
+                // Use formatDuration here
+                durationDisplay = `<span style="color:#228B22; font-weight:bold">${formatDuration(s.duration)} (Active)</span>`;
             } else if (s.isZombie) {
                 durationDisplay = '<span style="color:#cc0000; font-size:0.9em">DATA ERR</span>';
                 rowStyle = 'style="background-color: #fff0f0"'; 
             } else {
-                durationDisplay = s.duration + ' min';
+                // And use it here
+                durationDisplay = formatDuration(s.duration);
             }
-
+            
             return `
     <tr ${rowStyle}>
         <td>${formatDateTime(s.localStartTime)}</td>
@@ -907,7 +909,18 @@ permalink: /history/
         }).join('');
     }
 
+    function formatDuration(minutes) {
+        if (!minutes) return '—';
+        const h = Math.floor(minutes / 60);
+        const m = minutes % 60;
 
+        // If less than an hour, just show minutes (e.g. "45m")
+        if (h === 0) return `${m}m`;
+
+        // Otherwise show hours and minutes (e.g. "5h 45m")
+        // The padStart ensures "5h 05m" instead of "5h 5m" for better alignment
+        return `${h}h ${m.toString().padStart(2, '0')}m`;
+    }
 
     function formatDateTime(date) {
         return date.toLocaleString('en-US', {
