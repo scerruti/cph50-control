@@ -338,6 +338,9 @@ permalink: /history/
     function convertToLocalTime(utcDate) {
         /**
          * Convert UTC date to America/Los_Angeles time
+         * 
+         * NOTE: DST transitions may cause display issues on March 2nd and November 1st
+         * See KNOWN_ISSUES.md for details on daylight saving time edge cases
          */
         return new Date(utcDate.toLocaleString('en-US', { timeZone: 'America/Los_Angeles' }));
     }
