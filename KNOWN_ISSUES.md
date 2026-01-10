@@ -22,6 +22,34 @@
 
 ---
 
+## Midnight-Spanning Sessions Energy Attribution
+
+**Issue**: Sessions that cross midnight are attributed proportionally using vehicle's average charging rate, which may not reflect actual charging curve behavior.
+
+**Current Implementation**:
+- Uses fixed average charging rate from `vehicle_config.json` (e.g., 8.5 kW)
+- Day 0 energy = (time in day 0) × avg_rate
+- Day 1 energy = total_energy - day_0_energy
+
+**Known Inaccuracy**:
+- Charging rate typically declines over time (taper curve near full battery)
+- Session start may have higher power draw than average
+- Session end often shows reduced power as battery approaches full
+
+**Impact**: 
+- Energy attribution between days may be off by 5-15% for midnight-spanning sessions
+- Affects day-view aggregates when sessions cross midnight
+- Month/year views less affected (same total energy, just different daily breakdown)
+
+**Potential Solution**:
+- Analyze historical charging curves from power_samples data
+- Develop time-weighted formula (e.g., exponential decay model)
+- Or: Use actual power samples to calculate per-minute energy if available
+
+**Status**: Low priority; most sessions complete within a single day. Documented for future enhancement.
+
+---
+
 ## Future Enhancements
 
 - [ ] Session file discovery should scan directory recursively rather than using hardcoded file list
