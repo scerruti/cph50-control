@@ -285,7 +285,7 @@ permalink: /
                     <img src="${vehicleImage}" alt="${vehicleDisplay}">
                 </div>
                 <div class="vehicle-name">${vehicleDisplay}</div>
-                ${confidence > 0 ? `<div class="vehicle-confidence">Classification: ${(confidence * 100).toFixed(0)}% confidence</div>` : ''}
+                ${confidence > 0 ? `<div class="vehicle-confidence">Classification: ${(confidence * 100).toFixed(0)}% confidence</div>` : '<div class="vehicle-confidence" style="font-size: 11px; color: #999; margin-top: 10px; font-style: italic;">💡 Vehicle detected only when charging is active</div>'}
             </div>
 
             <div class="power-section">
