@@ -16,21 +16,32 @@ from python_chargepoint.exceptions import ChargePointCommunicationException
 
 
 def load_last_session():
-    """Load the last known session ID from tracking file."""
-    session_file = "data/last_session.json"
-    if os.path.exists(session_file):
-        with open(session_file, 'r') as f:
+    """Load the last known session ID from internal tracking file."""
+    tracking_file = "data/.last_session_id.json"
+    if os.path.exists(tracking_file):
+        with open(tracking_file, 'r') as f:
             data = json.load(f)
             return data.get("session_id"), data.get("timestamp")
     return None, None
+
+
+def save_session_tracking(session_id):
+    """Save session ID to internal tracking file (not exposed to dashboard)."""
+    tracking_file = "data/.last_session_id.json"
+    data = {
+        "session_id": session_id,
+        "timestamp": datetime.now(ZoneInfo('UTC')).isoformat(),
+    }
+    with open(tracking_file, 'w') as f:
+        json.dump(data, f, indent=2)
 
 
 def save_current_session(session_id, status_info=None):
     """Save current session ID and metadata to tracking file."""
     session_file = "data/last_session.json"
 
+    # Flatten structure: extract only dashboard-required fields
     data = {
-        "session_id": session_id,
         "timestamp": datetime.now(ZoneInfo('UTC')).isoformat(),
         "detected_at": datetime.now(ZoneInfo('America/Los_Angeles')).strftime('%Y-%m-%d %H:%M:%S %Z'),
         "power_kw": status_info.get("power_kw") if status_info else None,
@@ -38,7 +49,8 @@ def save_current_session(session_id, status_info=None):
         "duration_minutes": status_info.get("duration_minutes") if status_info else None,
         "vehicle_id": status_info.get("vehicle_id") if status_info else None,
         "vehicle_confidence": status_info.get("vehicle_confidence") if status_info else None,
-        "status": status_info or {}
+        "connected": status_info.get("connected", False) if status_info else False,
+        "charging": status_info.get("charging", False) if status_info else False,
     }
 
     with open(session_file, 'w') as f:
@@ -47,9 +59,9 @@ def save_current_session(session_id, status_info=None):
     # Commit to git
     try:
         subprocess.run(["git", "add", session_file], check=True, capture_output=True)
-        subprocess.run(["git", "commit", "-m", f"Monitor: detected session {session_id}"], check=True, capture_output=True)
+        subprocess.run(["git", "commit", "-m", f"Monitor: session snapshot"], check=True, capture_output=True)
         subprocess.run(["git", "push"], check=True, capture_output=True)
-        print(f"✓ Saved session {session_id} to tracking file")
+        print(f"✓ Saved session snapshot to {session_file}")
     except subprocess.CalledProcessError as e:
         print(f"⚠️  Warning: Could not commit session tracking: {e}")
 
@@ -218,8 +230,11 @@ def monitor():
             print(f"🆕 NEW SESSION DETECTED: {current_session_id}")
             print("=" * 60)
             
-            # Save session
+            # Save session snapshot for dashboard
             save_current_session(current_session_id, status_data)
+            
+            # Save session ID to internal tracking
+            save_session_tracking(current_session_id)
             
             # Trigger data collection
             trigger_data_collection(current_session_id)
@@ -232,6 +247,8 @@ def monitor():
             print("✓ No active session (vehicle not charging)")
             # Update dashboard with latest charger state
             save_current_session(None, status_data)
+            # Clear session tracking
+            save_session_tracking(None)
         
         print("=" * 60)
         print("✅ Session monitoring check complete")
