@@ -240,7 +240,8 @@
         
         async function loadDashboard() {
             try {
-                const response = await fetch('data/last_session.json');
+                const t = Date.now();
+                const response = await fetch('https://raw.githubusercontent.com/scerruti/cph50-control/main/data/last_session.json?t=' + t);
                 if (!response.ok) {
                     displayNoData();
                     return;
