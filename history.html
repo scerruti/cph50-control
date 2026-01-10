@@ -219,8 +219,6 @@ permalink: /history/
 
 <h2>Charging History</h2>
 
-<div id="status-container"></div>
-
 <div class="controls">
     <div class="control-group">
         <label>Period:</label>
@@ -320,7 +318,6 @@ permalink: /history/
          * This page loads available cache files and displays them.
          * If a month's cache doesn't exist yet, that month simply has no data.
          */
-        showStatusMessage('Loading charging history from repository...', 'loading');
         
         // Load vehicle configuration and session vehicle map
         try {
@@ -350,9 +347,6 @@ permalink: /history/
         const currentYear = now.getFullYear();
         const currentMonth = now.getMonth() + 1;
         
-        let cacheHits = 0;
-        let cacheMisses = 0;
-        
         // Generate list of months to try (last 13 months)
         for (let m = 0; m < 13; m++) {
             let year = currentYear;
@@ -363,7 +357,7 @@ permalink: /history/
             }
             
             const monthKey = `${year.toString().padStart(4, '0')}-${month.toString().padStart(2, '0')}`;
-            const cachePath = `data/session_cache/${monthKey}.json`;
+            const cachePath = `data/session_cache/${year}/${month.toString().padStart(2, '0')}/${monthKey}.json`;
             
             try {
                 const response = await fetch(`https://raw.githubusercontent.com/scerruti/cph50-control/main/${cachePath}?t=${Date.now()}`);
@@ -373,29 +367,16 @@ permalink: /history/
                         for (const session of sessions) {
                             allSessions.push(parseDetailedSession(session));
                         }
-                        cacheHits++;
                     }
-                } else {
-                    cacheMisses++;
                 }
             } catch (e) {
-                cacheMisses++;
+                // Silently skip missing months
             }
         }
         
         // Sort by start time
         allSessions.sort((a, b) => new Date(a.startTime) - new Date(b.startTime));
-        console.log(`Loaded ${allSessions.length} sessions from ${cacheHits} months`);
-        
-        // Show status message
-        if (allSessions.length === 0) {
-            showStatusMessage('No charging sessions cached yet. Waiting for GitHub Actions workflow to populate data.', 'warning');
-        } else if (cacheMisses > 0) {
-            const message = `Loaded ${allSessions.length} sessions from ${cacheHits} months (${cacheMisses} months have no data yet)`;
-            showStatusMessage(message, 'info');
-        } else {
-            hideStatusMessage();
-        }
+        console.log(`Loaded ${allSessions.length} sessions`);
     }
     
     function getVehicleDisplayName(vehicleId) {
@@ -815,30 +796,7 @@ permalink: /history/
         `}).join('');
     }
     
-    function showStatusMessage(message, type = 'info') {
-        /**
-         * Display a toast-style status message (non-obstructive)
-         * Types: loading, info, warning, error
-         * Message appears in top-right corner and doesn't block data
-         */
-        const container = document.getElementById('status-container');
-        const spinner = type === 'loading' ? '<span class="spinner"></span> ' : '';
-        container.innerHTML = `<div class="status-message ${type}">${spinner}${message}</div>`;
-        
-        // Auto-hide after 5 seconds for info messages (keep loading/warning visible)
-        if (type === 'info') {
-            setTimeout(() => hideStatusMessage(), 5000);
-        }
-    }
-    
-    function hideStatusMessage() {
-        const container = document.getElementById('status-container');
-        const msg = container.querySelector('.status-message');
-        if (msg) {
-            msg.style.animation = 'slideOut 0.3s ease-in';
-            setTimeout(() => container.innerHTML = '', 300);
-        }
-    }
+
     
     function formatDateTime(date) {
         return date.toLocaleString('en-US', {
