@@ -325,41 +325,6 @@ permalink: /history/
         return displayName;
     }
     
-    function parseCollectionSession(data) {
-        /**
-         * Parse the collection_start format (5-minute sample collection)
-         */
-        const startTime = new Date(data.collection_start);
-        const localStartTime = convertToLocalTime(startTime);
-        
-        // Find max energy reading from samples
-        let energy = 0;
-        if (data.samples && data.samples.length > 0) {
-            const lastSample = data.samples[data.samples.length - 1];
-            energy = lastSample.energy_kwh || 0;
-        }
-        
-        // Estimate miles from energy and vehicle efficiency
-        const vehicleId = data.vehicle_id || 'unknown';
-        const vehicle = vehicleConfig[vehicleId];
-        const efficiency = vehicle?.efficiency_mi_per_kwh || 2.5;
-        const miles = energy * efficiency;
-        
-        return {
-            id: data.session_id,
-            startTime: startTime,
-            localStartTime: localStartTime,
-            endTime: new Date(data.collection_end),
-            duration: data.duration_seconds ? Math.round(data.duration_seconds / 60) : null,
-            energy: energy,
-            miles: miles,
-            vehicleId: vehicleId,
-            vehicleDisplayName: getVehicleDisplayName(vehicleId),
-            confidence: data.vehicle_confidence || 0,
-            location: 'Home Charger'
-        };
-    }
-    
     function parseDetailedSession(data) {
         /**
          * Parse the detailed session format (from ChargePoint API cached in session_cache/)
