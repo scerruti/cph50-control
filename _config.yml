@@ -10,5 +10,6 @@ exclude:
   - Gemfile.lock
   - README.md
   - JEKYLL_MIGRATION_PLAN.md
+  - JEKYLL_VERIFICATION.md
   - node_modules
   - test_env
