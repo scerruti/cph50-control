@@ -395,17 +395,15 @@ permalink: /history/
     
     function parseDetailedSession(data) {
         /**
-         * Parse the detailed session format (from ChargePoint API cached in session_cache/)
-         * Merges ChargePoint data with correct vehicle ID from session_vehicle_map.json
+         * Parse minimal session format from monthly cache files
+         * Cache contains only: session_id, start_time, end_time, energy, vehicle (id + confidence)
+         * Vehicle names and efficiency come from vehicle_config.json
          */
-        const session = data.session || {};
-        const location = data.location || {};
-        
         const startTime = new Date(data.session_start_time || 0);
         const endTime = new Date(data.session_end_time || 0);
         const localStartTime = convertToLocalTime(startTime);
         
-        // Calculate duration
+        // Calculate duration from start/end times
         let duration = null;
         if (startTime && endTime && endTime > startTime) {
             duration = Math.round((endTime - startTime) / 1000 / 60);
@@ -413,18 +411,20 @@ permalink: /history/
         
         const sessionId = data.session_id;
         
-        // Get vehicle ID from map (authoritative source, overrides ChargePoint data)
-        let vehicleId = 'unknown';
-        let confidence = 0;
+        // Get vehicle ID and confidence from cache (already classified)
+        let vehicleId = data.vehicle?.id || 'unknown';
+        let confidence = data.vehicle?.confidence || 0;
+        
+        // Override with session_vehicle_map if it has different confidence/source
         if (sessionVehicleMap[sessionId]) {
-            vehicleId = sessionVehicleMap[sessionId].vehicle || 'unknown';
-            confidence = sessionVehicleMap[sessionId].confidence || 0;
+            vehicleId = sessionVehicleMap[sessionId].vehicle || vehicleId;
+            confidence = sessionVehicleMap[sessionId].confidence || confidence;
         }
         
         // Get efficiency for miles calculation
         const vehicleConfig_data = vehicleConfig[vehicleId];
         const efficiency = vehicleConfig_data?.efficiency_mi_per_kwh || 2.5;
-        const energy = session.energy_kwh || 0;
+        const energy = data.energy_kwh || 0;
         const miles = energy * efficiency;
         
         return {
@@ -438,7 +438,7 @@ permalink: /history/
             vehicleId: vehicleId,
             vehicleDisplayName: getVehicleDisplayName(vehicleId),
             confidence: confidence,
-            location: location.name || location.address || 'Unknown'
+            location: 'Home'  // Only one location for now (home charger)
         };
     }
     

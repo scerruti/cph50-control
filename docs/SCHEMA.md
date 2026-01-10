@@ -2,6 +2,61 @@
 
 JSON schemas for all data structures in CPH50 Control.
 
+## Session Cache Schema
+
+File: `data/session_cache/YYYY-MM.json`
+
+```json
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "type": "array",
+  "title": "Session Cache (Monthly)",
+  "description": "Minimal session data cached for history display. Array of sessions organized by month.",
+  "items": {
+    "type": "object",
+    "required": ["session_id", "session_start_time", "session_end_time", "energy_kwh", "vehicle"],
+    "properties": {
+      "session_id": {
+        "type": ["string", "integer"],
+        "description": "Unique session identifier from ChargePoint API"
+      },
+      "session_start_time": {
+        "type": "string",
+        "format": "date-time",
+        "description": "UTC timestamp when session started"
+      },
+      "session_end_time": {
+        "type": ["string", "null"],
+        "format": "date-time",
+        "description": "UTC timestamp when session ended"
+      },
+      "energy_kwh": {
+        "type": ["number", "null"],
+        "description": "Total energy delivered in kilowatt-hours"
+      },
+      "vehicle": {
+        "type": "object",
+        "required": ["id", "confidence"],
+        "properties": {
+          "id": {
+            "type": ["string", "null"],
+            "description": "Vehicle identifier (key to vehicle_config.json), null if unknown"
+          },
+          "confidence": {
+            "type": ["number", "null"],
+            "minimum": 0,
+            "maximum": 1,
+            "description": "ML classifier confidence score (0-1), null if unknown"
+          }
+        }
+      }
+    }
+  }
+}
+```
+
+---
+
 ## Session Data Schema
 
 File: `data/sessions/YYYY/MM/DD/{session_id}.json`

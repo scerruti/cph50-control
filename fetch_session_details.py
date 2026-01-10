@@ -43,13 +43,17 @@ except ImportError:
 
 def fetch_session_details(session_id):
     """
-    Fetch full ChargePoint session data and cache locally in monthly JSON files.
+    Fetch ChargePoint session data and cache minimal metrics locally.
+    
+    Creates minimal monthly cache files with only essential data for history display:
+    - session_id, start_time, end_time, energy_kwh
+    - vehicle ID and classifier confidence
     
     Args:
         session_id (str): ChargePoint session ID
         
     Returns:
-        dict: Session data with vehicle classification merged in
+        dict: Minimal session data for cache
     """
     
     # Get credentials from environment
@@ -74,52 +78,15 @@ def fetch_session_details(session_id):
         year = session_start.year
         month = session_start.month
         
-        # Convert session object to dictionary with nested structures
+        # Create minimal cache structure (only what history.html needs)
         session_dict = {
             "session_id": session_id,
             "session_start_time": session_obj.session_start_time.isoformat(),
             "session_end_time": session_obj.session_end_time.isoformat() if session_obj.session_end_time else None,
-            
-            # Vehicle information
+            "energy_kwh": float(session_obj.energy_kwh) if session_obj.energy_kwh else None,
             "vehicle": {
-                "vehicle_id": getattr(session_obj.vehicle, 'vehicle_id', None),
-                "vehicle_name": getattr(session_obj.vehicle, 'vehicle_name', None),
-                "model": getattr(session_obj.vehicle, 'model', None),
-                "vin": getattr(session_obj.vehicle, 'vin', None),
-                "make": getattr(session_obj.vehicle, 'make', None)
-            },
-            
-            # Location information
-            "location": {
-                "location_id": getattr(session_obj.location, 'location_id', None),
-                "name": getattr(session_obj.location, 'name', None),
-                "address": getattr(session_obj.location, 'address', None),
-                "city": getattr(session_obj.location, 'city', None),
-                "state": getattr(session_obj.location, 'state', None),
-                "zip_code": getattr(session_obj.location, 'zip_code', None)
-            },
-            
-            # Charger information
-            "charger": {
-                "charger_id": getattr(session_obj.charger, 'charger_id', None),
-                "connector_type": getattr(session_obj.charger, 'connector_type', None),
-                "charger_model": getattr(session_obj.charger, 'charger_model', None),
-                "level": getattr(session_obj.charger, 'level', None)
-            },
-            
-            # Session metrics
-            "session": {
-                "energy_kwh": float(session_obj.energy_kwh) if session_obj.energy_kwh else None,
-                "duration_seconds": int(session_obj.duration_seconds) if session_obj.duration_seconds else None,
-                "cost": float(session_obj.cost) if session_obj.cost else None,
-                "peak_power_kw": float(session_obj.peak_power_kw) if session_obj.peak_power_kw else None,
-                "status": session_obj.status
-            },
-            
-            # Utility information
-            "utility": {
-                "utility_name": getattr(session_obj.utility, 'utility_name', None),
-                "utility_company": getattr(session_obj.utility, 'utility_company', None) if hasattr(session_obj, 'utility') else None
+                "id": None,
+                "confidence": None
             }
         }
         
@@ -135,9 +102,9 @@ def fetch_session_details(session_id):
                 with open(classification_path, 'r') as f:
                     classification_data = json.load(f)
                     if "vehicle_id" in classification_data:
-                        session_dict["vehicle_id"] = classification_data["vehicle_id"]
+                        session_dict["vehicle"]["id"] = classification_data["vehicle_id"]
                     if "vehicle_confidence" in classification_data:
-                        session_dict["vehicle_confidence"] = classification_data["vehicle_confidence"]
+                        session_dict["vehicle"]["confidence"] = classification_data["vehicle_confidence"]
                 break
         
         # Organize cache by month: data/session_cache/YYYY-MM.json
@@ -148,6 +115,43 @@ def fetch_session_details(session_id):
         
         # Read existing sessions for this month
         sessions = []
+        if os.path.exists(cache_file):
+            print(f"[fetch_session_details] Loading existing {cache_file}")
+            with open(cache_file, 'r') as f:
+                sessions = json.load(f)
+        
+        # Check if session already exists (avoid duplicates)
+        existing_index = next((i for i, s in enumerate(sessions) if s["session_id"] == session_id), None)
+        
+        if existing_index is not None:
+            print(f"[fetch_session_details] Updating existing session at index {existing_index}")
+            sessions[existing_index] = session_dict
+        else:
+            print(f"[fetch_session_details] Adding new session to {cache_file}")
+            sessions.append(session_dict)
+        
+        # Write atomically: write to temp file, then rename
+        temp_file = f"{cache_file}.tmp"
+        with open(temp_file, 'w') as f:
+            json.dump(sessions, f, indent=2)
+        
+        os.rename(temp_file, cache_file)
+        print(f"[fetch_session_details] Saved {len(sessions)} sessions to {cache_file}")
+        
+        # Git commit
+        try:
+            subprocess.run(["git", "add", cache_file], cwd=".", check=True)
+            subprocess.run(
+                ["git", "commit", "-m", f"Cache: {len(sessions)} sessions for {year:04d}-{month:02d}"],
+                cwd=".",
+                check=True
+            )
+            print(f"[fetch_session_details] Committed to git")
+        except subprocess.CalledProcessError as e:
+            print(f"[fetch_session_details] WARNING: Git commit failed: {e}")
+            # Don't fail the entire operation if git fails
+        
+        return session_dict
         if os.path.exists(cache_file):
             print(f"[fetch_session_details] Loading existing {cache_file}")
             with open(cache_file, 'r') as f:

@@ -132,64 +132,45 @@ This document describes all data files in the CPH50 Control system, their purpos
 ---
 
 ### `data/session_cache/YYYY-MM.json`
-**Purpose**: Full ChargePoint session data for history display (populated by `fetch_session_details.py`)  
-**Format**: Array of session objects  
+**Purpose**: Minimal session metrics for history display (populated by `fetch_session_details.py`)  
+**Format**: Array of minimal session objects  
 **Created/Updated by**: `fetch_session_details.py` (triggered after session completes)  
 **Read by**: `history.html` (history page displays cached data)  
 **Frequency**: One entry per charging session; file grows over the month (~30-40 sessions/month)  
 **Organization**: Monthly files for efficient loading (single fetch = entire month)
 
-**File Size**: ~60-150 KB per month (manageable for git, fast to load)
+**File Size**: ~5-10 KB per month (very lightweight, fast to load)
 
-**Structure** (array of sessions):
+**Minimal Structure** (array of sessions):
 ```json
 [
   {
     "session_id": "4751613101",
     "session_start_time": "2026-01-10T14:00:01+00:00",
     "session_end_time": "2026-01-10T22:30:15+00:00",
+    "energy_kwh": 51.22,
     "vehicle": {
-      "vehicle_id": "serenity_equinox_2024",
-      "vehicle_name": "Serenity",
-      "model": "Equinox EV",
-      "vin": "...",
-      "make": "Chevrolet"
-    },
-    "location": {
-      "location_id": "...",
-      "name": "Home",
-      "address": "...",
-      "city": "Oceanside",
-      "state": "CA",
-      "zip_code": "92054"
-    },
-    "charger": {
-      "charger_id": "...",
-      "connector_type": "J1772",
-      "charger_model": "CPH50",
-      "level": 2
-    },
-    "session": {
-      "energy_kwh": 51.22,
-      "duration_seconds": 30614,
-      "cost": 8.45,
-      "peak_power_kw": 11.5,
-      "status": "completed"
-    },
-    "utility": {
-      "utility_name": "SDG&E",
-      "utility_company": "San Diego Gas & Electric"
-    },
-    "vehicle_id": "serenity_equinox_2024",
-    "vehicle_confidence": 0.95
+      "id": "serenity_equinox_2024",
+      "confidence": 0.95
+    }
   },
   ...additional sessions...
 ]
 ```
 
+**Fields**:
+- `session_id`: ChargePoint session identifier
+- `session_start_time`: UTC timestamp of session start
+- `session_end_time`: UTC timestamp of session end (null if still charging)
+- `energy_kwh`: Total energy delivered (number or null)
+- `vehicle.id`: Vehicle key to `vehicle_config.json` (null if unknown)
+- `vehicle.confidence`: ML classifier confidence 0-1 (null if unknown)
+
 **Notes**:
+- Minimal structure: only essential data for history display
+- Duration, vehicle name, and efficiency looked up at display time
 - Organized by month (YYYY-MM.json) for efficient history page loading
-- Contains vehicle classification merged from `data/sessions/{date}/{id}.json`
+- Vehicle classification merged from `data/sessions/{date}/{id}.json` during creation
 - Atomic writes (temp file + rename) prevent corruption
 - Each commit shows full month snapshot for audit trail
 
