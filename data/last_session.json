@@ -1,7 +1,7 @@
 {
   "session_id": "4758000341",
-  "timestamp": "2026-01-10T14:15:20.773836+00:00",
-  "detected_at": "2026-01-10 06:15:20 PST",
+  "timestamp": "2026-01-10T14:30:20.556105+00:00",
+  "detected_at": "2026-01-10 06:30:20 PST",
   "power_kw": null,
   "energy_kwh": null,
   "duration_minutes": null,
@@ -14,9 +14,6 @@
     "charging_status": "CHARGING",
     "last_connected_at": "2023-02-03T07:44:32+00:00",
     "session_id": "4758000341",
-    "charging": true,
-    "power_kw": null,
-    "energy_kwh": null,
-    "duration_minutes": null
+    "charging": true
   }
 }
