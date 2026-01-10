@@ -324,12 +324,23 @@ This document describes all data files in the CPH50 Control system, their purpos
 **Reads**:
 - Monthly cache files from `data/session_cache/YYYY-MM.json`
 - `data/vehicle_config.json` (vehicle names and efficiency)
+- `data/session_vehicle_map.json` (correct vehicle assignments)
 
 **Display**:
 - Aggregated energy/miles/sessions by period (day/month/year)
 - Interactive bar chart
 - Session details table with filters
 - Vehicle and metric selection dropdowns
+
+**Fallback Strategy**:
+- Loads cached monthly files from GitHub (fast, no API calls)
+- If cache file missing: Shows warning but doesn't block display
+- Future: Will fetch from ChargePoint API via proxy endpoint (pending implementation)
+- Requires: Python API endpoint or Cloudflare Worker proxy that:
+  - Authenticates with ChargePoint (CP_USERNAME/CP_PASSWORD)
+  - Fetches session details
+  - Returns formatted session data
+  - Endpoint: `/api/session/{sessionId}` (POST or GET)
 
 ---
 

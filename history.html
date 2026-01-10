@@ -271,6 +271,39 @@ permalink: /history/
     let vehicleConfig = {};
     let sessionVehicleMap = {};
     
+    async function fetchSessionFromChargePoint(sessionId, monthKey) {
+        /**
+         * Fallback: Fetch a single session from ChargePoint API via proxy endpoint.
+         * This would be called when a cache file is missing for a specific month.
+         * 
+         * Requires: A proxy endpoint (Python API or Cloudflare Worker) that:
+         * - Authenticates with ChargePoint
+         * - Fetches the session
+         * - Returns formatted session data
+         * 
+         * Currently: Returns null (placeholder for future implementation)
+         */
+        try {
+            // When implemented, this would call something like:
+            // GET /api/session/{sessionId}
+            // POST to a Python endpoint that fetches from ChargePoint
+            // Or use a Cloudflare Worker as proxy
+            
+            console.log(`Attempting to fetch ${sessionId} from ChargePoint (not yet implemented)`);
+            
+            // Placeholder: would fetch and parse response
+            // const response = await fetch(`/api/session/${sessionId}?t=${Date.now()}`);
+            // if (response.ok) {
+            //     return await response.json();
+            // }
+            
+            return null;
+        } catch (e) {
+            console.warn(`Could not fetch ${sessionId} from ChargePoint:`, e);
+            return null;
+        }
+    }
+    
     async function discoverSessions() {
         /**
          * Load cached session data (metrics from ChargePoint) and vehicle map (correct vehicle IDs).
@@ -322,6 +355,7 @@ permalink: /history/
         
         let cacheHits = 0;
         let cacheMisses = 0;
+        let fallbackAttempts = 0;
         
         // Load all available cache files
         for (const monthKey of monthsToCheck) {
@@ -339,8 +373,11 @@ permalink: /history/
                     }
                 } else {
                     cacheMisses++;
-                    // Could add fallback to ChargePoint API here for missing months
-                    console.warn(`Cache file not found: ${cachePath}`);
+                    // Attempt fallback to ChargePoint API for this month
+                    // Note: This requires a proxy endpoint (Python API or Cloudflare Worker)
+                    // For now, just log - implementation pending
+                    console.warn(`Cache file not found: ${cachePath} - fallback not yet available`);
+                    fallbackAttempts++;
                 }
             } catch (e) {
                 cacheMisses++;
@@ -350,13 +387,16 @@ permalink: /history/
         
         // Sort by start time
         allSessions.sort((a, b) => new Date(a.startTime) - new Date(b.startTime));
-        console.log(`Loaded ${allSessions.length} sessions (${cacheHits} cache hits, ${cacheMisses} misses)`);
+        console.log(`Loaded ${allSessions.length} sessions (${cacheHits} cache hits, ${cacheMisses} misses, ${fallbackAttempts} fallback attempts)`);
         
         // Show status message
         if (allSessions.length === 0) {
             showStatusMessage('No sessions found. Cache files may still be populating.', 'warning');
         } else if (cacheMisses > 0) {
-            showStatusMessage(`Loaded ${allSessions.length} sessions (${cacheMisses} months not yet cached)`, 'warning');
+            const message = fallbackAttempts > 0 
+                ? `Loaded ${allSessions.length} sessions (${cacheMisses} months not cached, ${fallbackAttempts} fallback pending)`
+                : `Loaded ${allSessions.length} sessions (${cacheMisses} months not yet cached)`;
+            showStatusMessage(message, 'warning');
         } else {
             hideStatusMessage();
         }
