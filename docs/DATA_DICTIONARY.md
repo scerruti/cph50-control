@@ -251,12 +251,57 @@ This document describes all data files in the CPH50 Control system, their purpos
 
 ---
 
-### `data/session_vehicle_map.json` (Legacy)
-**Purpose**: Manual vehicle mapping (fallback if classifier unavailable)  
+### `data/session_vehicle_map.json`
+**Purpose**: Master registry of vehicle assignments for all sessions (source of truth)  
 **Format**: Mapping of session_id to vehicle labels  
-**Created/Updated by**: Manual or legacy scripts  
-**Read by**: `monitor_sessions.py` (fallback lookup)  
-**Status**: Deprecated; classifier is primary method  
+**Created/Updated by**: 
+  - `collect_session_data.py` (after classifier runs - auto-update with confidence)
+  - `history.html` (future: user manual labeling UI)
+**Read by**: 
+  - `history.html` (to get correct vehicle for each session)
+  - Any analysis/reporting that needs vehicle truth
+**Frequency**: Updated after each charging session is classified
+
+**Structure**:
+```json
+{
+  "sessions": {
+    "4751613101": {
+      "vehicle": "serenity_equinox_2024",
+      "confidence": 0.95,
+      "source": "classifier",
+      "labeled_at": "2026-01-10T14:06:00+00:00"
+    },
+    "4754846071": {
+      "vehicle": "serenity_equinox_2024",
+      "confidence": 0.88,
+      "source": "classifier",
+      "labeled_at": "2026-01-09T22:15:00+00:00"
+    }
+  },
+  "unknown_sessions": ["4758000342", "4758000343"],
+  "last_updated": "2026-01-10T14:06:00+00:00",
+  "statistics": {
+    "total_sessions": 45,
+    "labeled_sessions": 43,
+    "serenity_equinox_2024": 28,
+    "volvo_xc40_2021": 15,
+    "unknown": 2
+  }
+}
+```
+
+**Fields**:
+- `vehicle`: Key to `vehicle_config.json` (e.g., "serenity_equinox_2024")
+- `confidence`: 0-1 confidence score from ML classifier
+- `source`: How vehicle was identified ("classifier", "manual", "chargepoint_corrected", etc)
+- `labeled_at`: ISO timestamp of when assignment was made
+
+**Important Notes**:
+- ✅ **Authoritative source** for vehicle-to-session mapping (overrides ChargePoint data)
+- ✅ **Updated by classifier** after power samples collected (each session)
+- ✅ **Supports manual overrides** for when ML or ChargePoint is wrong
+- ⚠️ **ChargePoint data is unreliable** - this map corrects those errors
 
 ---
 

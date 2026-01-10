@@ -23,6 +23,80 @@ except ImportError:
     CLASSIFIER_AVAILABLE = False
 
 
+def update_session_vehicle_map(session_id, vehicle_id, vehicle_confidence, source="collector"):
+    """
+    Update the session_vehicle_map.json with vehicle classification.
+    
+    Args:
+        session_id: ChargePoint session ID
+        vehicle_id: Identified vehicle ID (or None for unknown)
+        vehicle_confidence: Confidence score 0-1 (or None)
+        source: Source of identification (collector, classifier, manual, etc)
+    """
+    map_file = "data/session_vehicle_map.json"
+    
+    # Load existing map
+    vehicle_map = {"sessions": {}, "unknown_sessions": [], "last_updated": datetime.now(ZoneInfo('UTC')).isoformat()}
+    if os.path.exists(map_file):
+        try:
+            with open(map_file, 'r') as f:
+                existing = json.load(f)
+                vehicle_map = existing
+        except Exception as e:
+            print(f"⚠️  Warning: Could not load {map_file}: {e}")
+    
+    # Update or add session entry
+    if vehicle_id:
+        vehicle_map["sessions"][session_id] = {
+            "vehicle": vehicle_id,
+            "confidence": vehicle_confidence or 0.0,
+            "source": source,
+            "labeled_at": datetime.now(ZoneInfo('UTC')).isoformat()
+        }
+        # Remove from unknown_sessions if present
+        if session_id in vehicle_map["unknown_sessions"]:
+            vehicle_map["unknown_sessions"].remove(session_id)
+    else:
+        if session_id not in vehicle_map["sessions"] and session_id not in vehicle_map["unknown_sessions"]:
+            vehicle_map["unknown_sessions"].append(session_id)
+    
+    # Update statistics
+    stats = {}
+    for sid, entry in vehicle_map["sessions"].items():
+        vehicle = entry.get("vehicle", "unknown")
+        stats[vehicle] = stats.get(vehicle, 0) + 1
+    stats["unknown"] = len(vehicle_map["unknown_sessions"])
+    vehicle_map["statistics"] = {
+        "total_sessions": len(vehicle_map["sessions"]) + len(vehicle_map["unknown_sessions"]),
+        "labeled_sessions": len(vehicle_map["sessions"]),
+        **stats
+    }
+    
+    vehicle_map["last_updated"] = datetime.now(ZoneInfo('UTC')).isoformat()
+    
+    # Write atomically
+    temp_file = f"{map_file}.tmp"
+    try:
+        with open(temp_file, 'w') as f:
+            json.dump(vehicle_map, f, indent=2)
+        os.rename(temp_file, map_file)
+        print(f"✓ Updated {map_file}")
+        
+        # Commit to git
+        try:
+            subprocess.run(["git", "add", map_file], cwd=".", check=True)
+            subprocess.run(
+                ["git", "commit", "-m", f"Map: session {session_id} vehicle={vehicle_id}"],
+                cwd=".",
+                check=True
+            )
+        except subprocess.CalledProcessError:
+            # Commit may fail if nothing changed, that's ok
+            pass
+    except Exception as e:
+        print(f"⚠️  Warning: Could not update {map_file}: {e}")
+
+
 def collect_session_data(session_id):
     """Collect 30 samples of charging data over 5 minutes."""
     print("=" * 60)
@@ -127,6 +201,9 @@ def collect_session_data(session_id):
             print(f"   Min Power: {min_power:.2f} kW")
             print(f"   Variance: {variance:.4f}")
             print()
+        
+        # Update session_vehicle_map with classification result
+        update_session_vehicle_map(session_id, vehicle_id, vehicle_confidence, source="classifier")
         
         # Save to file in date-based directory structure
         # Extract start date from collection_start timestamp

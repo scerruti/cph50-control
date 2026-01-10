@@ -223,11 +223,12 @@ permalink: /history/
     let currentDate = new Date();
     let chart = null;
     let vehicleConfig = {};
+    let sessionVehicleMap = {};
     
     async function discoverSessions() {
         /**
-         * Discovers all session files recursively from data/sessions/ directory.
-         * For now, loads from GitHub raw URL by constructing paths.
+         * Load cached session data (metrics from ChargePoint) and vehicle map (correct vehicle IDs).
+         * Merges both to create complete session records.
          */
         
         // Load vehicle configuration
@@ -241,32 +242,52 @@ permalink: /history/
             console.warn('Could not load vehicle config:', e);
         }
         
+        // Load session vehicle map (authoritative vehicle assignments)
+        try {
+            const response = await fetch(`https://raw.githubusercontent.com/scerruti/cph50-control/main/data/session_vehicle_map.json?t=${Date.now()}`);
+            if (response.ok) {
+                const map = await response.json();
+                sessionVehicleMap = map.sessions || {};
+            }
+        } catch (e) {
+            console.warn('Could not load session vehicle map:', e);
+        }
+        
         allSessions = [];
         
-        // Known session files (will expand as new sessions are collected)
-        const sessionPaths = [
-            'data/sessions/2025/01/07/4751613101.json',
-            'data/sessions/2025/01/08/4754846071.json',
-            'data/sessions/2026/01/10/4758000341.json'
-        ];
+        // Dynamically discover cache files for current and previous year
+        const now = new Date();
+        const currentYear = now.getFullYear();
+        const currentMonth = now.getMonth() + 1;
         
-        for (const path of sessionPaths) {
+        // Generate list of months to check (current year + last 12 months)
+        const monthsToCheck = [];
+        for (let m = 0; m < 13; m++) {
+            let year = currentYear;
+            let month = currentMonth - m;
+            if (month < 1) {
+                month += 12;
+                year -= 1;
+            }
+            monthsToCheck.push(`${year.toString().padStart(4, '0')}-${month.toString().padStart(2, '0')}`);
+        }
+        
+        // Load all available cache files
+        for (const monthKey of monthsToCheck) {
+            const cachePath = `data/session_cache/${monthKey}.json`;
             try {
-                const response = await fetch(`https://raw.githubusercontent.com/scerruti/cph50-control/main/${path}?t=${Date.now()}`);
+                const response = await fetch(`https://raw.githubusercontent.com/scerruti/cph50-control/main/${cachePath}?t=${Date.now()}`);
                 if (response.ok) {
-                    const data = await response.json();
-                    
-                    // Handle different session file formats
-                    if (data.samples) {
-                        // New format: collection data with samples
-                        allSessions.push(parseCollectionSession(data));
-                    } else if (data.session) {
-                        // Old format: detailed session object
-                        allSessions.push(parseDetailedSession(data));
+                    const sessions = await response.json();
+                    // sessions is an array of session objects
+                    if (Array.isArray(sessions)) {
+                        for (const session of sessions) {
+                            allSessions.push(parseDetailedSession(session));
+                        }
                     }
                 }
             } catch (e) {
-                console.warn(`Could not load ${path}:`, e);
+                console.warn(`Could not load ${cachePath}:`, e);
             }
         }
         
@@ -341,30 +362,50 @@ permalink: /history/
     
     function parseDetailedSession(data) {
         /**
-         * Parse the detailed session format (from ChargePoint API)
+         * Parse the detailed session format (from ChargePoint API cached in session_cache/)
+         * Merges ChargePoint data with correct vehicle ID from session_vehicle_map.json
          */
         const session = data.session || {};
-        const vehicle = data.vehicle || {};
         const location = data.location || {};
         
-        const startTime = new Date(session.start_time || 0);
+        const startTime = new Date(data.session_start_time || 0);
+        const endTime = new Date(data.session_end_time || 0);
         const localStartTime = convertToLocalTime(startTime);
-        const duration = session.session_time_ms ? Math.round(session.session_time_ms / 1000 / 60) : null;
         
-        const vehicleId = data.vehicle_id || 'unknown';
+        // Calculate duration
+        let duration = null;
+        if (startTime && endTime && endTime > startTime) {
+            duration = Math.round((endTime - startTime) / 1000 / 60);
+        }
+        
+        const sessionId = data.session_id;
+        
+        // Get vehicle ID from map (authoritative source, overrides ChargePoint data)
+        let vehicleId = 'unknown';
+        let confidence = 0;
+        if (sessionVehicleMap[sessionId]) {
+            vehicleId = sessionVehicleMap[sessionId].vehicle || 'unknown';
+            confidence = sessionVehicleMap[sessionId].confidence || 0;
+        }
+        
+        // Get efficiency for miles calculation
+        const vehicleConfig_data = vehicleConfig[vehicleId];
+        const efficiency = vehicleConfig_data?.efficiency_mi_per_kwh || 2.5;
+        const energy = session.energy_kwh || 0;
+        const miles = energy * efficiency;
         
         return {
-            id: data.session_id,
+            id: sessionId,
             startTime: startTime,
             localStartTime: localStartTime,
-            endTime: new Date(session.end_time || 0),
+            endTime: endTime,
             duration: duration,
-            energy: session.energy_kwh || 0,
-            miles: session.miles_added || 0,
+            energy: energy,
+            miles: miles,
             vehicleId: vehicleId,
             vehicleDisplayName: getVehicleDisplayName(vehicleId),
-            confidence: data.vehicle_confidence || 0,
-            location: location.address || 'Unknown'
+            confidence: confidence,
+            location: location.name || location.address || 'Unknown'
         };
     }
     
