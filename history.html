@@ -175,9 +175,12 @@ permalink: /history/
         color: #7f1d1d;
         background: #fef2f2;
     }
-</style>
-        position: relative;
-        height: 400px;
+        /* Fix: moved from outside style block */
+        .chart-container {
+            position: relative;
+            height: 400px;
+        }
+    </style>
     }
     
     .sessions-table {
@@ -302,6 +305,12 @@ permalink: /history/
     let chart = null;
     let vehicleConfig = {};
     let sessionVehicleMap = {};
+
+    // Weighted average efficiency for unknown vehicles is computed by:
+    //   1. Summing total kWh delivered for each known vehicle across all sessions.
+    //   2. Calculating weighted average: sum(kWh_i * eff_i) / sum(kWh_i)
+    //   3. Using this value for unknown vehicles' mileage estimation.
+    let weightedAvgEfficiency = 2.5; // fallback if no data
     
     // No direct ChargePoint API calls from frontend
     // All data comes from GitHub Actions workflows that populate monthly cache files
@@ -341,6 +350,10 @@ permalink: /history/
         }
         
         allSessions = [];
+
+        // Temporary array to collect known vehicle energy for weighted average
+        let vehicleEnergyTotals = {};
+        let vehicleEfficiencies = {};
         
         // Try to load monthly cache files for last 13 months
         const now = new Date();
@@ -365,6 +378,14 @@ permalink: /history/
                     const sessions = await response.json();
                     if (Array.isArray(sessions)) {
                         for (const session of sessions) {
+                            // For weighted average, collect energy by vehicle
+                            let sessionId = session.session_id;
+                            let vehicleId = sessionVehicleMap[sessionId]?.vehicle || session.vehicle?.id;
+                            let energy = session.energy_kwh || 0;
+                            if (vehicleId && vehicleId !== 'unknown' && vehicleConfig[vehicleId]) {
+                                vehicleEnergyTotals[vehicleId] = (vehicleEnergyTotals[vehicleId] || 0) + energy;
+                                vehicleEfficiencies[vehicleId] = vehicleConfig[vehicleId].efficiency_mi_per_kwh;
+                            }
                             allSessions.push(parseDetailedSession(session));
                         }
                     }
@@ -372,6 +393,21 @@ permalink: /history/
             } catch (e) {
                 // Silently skip missing months
             }
+        }
+
+        // Compute weighted average efficiency for unknown vehicles
+        let totalKWh = 0, weightedSum = 0;
+        for (const [vid, kwh] of Object.entries(vehicleEnergyTotals)) {
+            const eff = vehicleEfficiencies[vid];
+            if (typeof eff === 'number' && typeof kwh === 'number') {
+                weightedSum += kwh * eff;
+                totalKWh += kwh;
+            }
+        }
+        if (totalKWh > 0) {
+            weightedAvgEfficiency = weightedSum / totalKWh;
+        } else {
+            weightedAvgEfficiency = 2.5;
         }
         
         // Sort by start time
@@ -438,8 +474,13 @@ permalink: /history/
         
         // Get efficiency for miles calculation
         const vehicleConfig_data = vehicleConfig[vehicleId];
-        const efficiency = vehicleConfig_data?.efficiency_mi_per_kwh || 2.5;
         const energy = data.energy_kwh || 0;
+        let efficiency;
+        if (vehicleId === 'unknown' || !vehicleConfig_data) {
+            efficiency = weightedAvgEfficiency;
+        } else {
+            efficiency = vehicleConfig_data.efficiency_mi_per_kwh || weightedAvgEfficiency;
+        }
         const miles = energy * efficiency;
         
         return {
@@ -520,10 +561,10 @@ permalink: /history/
     
     function isSessionInPeriod(session) {
         const start = session.startTime;
-        const end = session.endTime;
-        
+        let end = session.endTime;
+
         let periodStart, periodEnd;
-        
+
         if (currentView === 'day') {
             periodStart = new Date(currentDate);
             periodStart.setHours(0, 0, 0, 0);
@@ -536,7 +577,19 @@ permalink: /history/
             periodStart = new Date(currentDate.getFullYear(), 0, 1);
             periodEnd = new Date(currentDate.getFullYear(), 11, 31, 23, 59, 59, 999);
         }
-        
+
+        // If end is missing, only treat as in-progress if this is the most recent session
+        if (!end || isNaN(end.getTime())) {
+            // Find the latest session start time in allSessions
+            const latestStart = Math.max(...allSessions.map(s => s.startTime.getTime()));
+            if (start.getTime() === latestStart) {
+                end = new Date(); // treat as in-progress, use now as end
+            } else {
+                // Not the latest session, ignore
+                return false;
+            }
+        }
+
         // Session overlaps period if it started before period ends and ended after period starts
         return start <= periodEnd && end >= periodStart;
     }
@@ -779,11 +832,23 @@ permalink: /history/
         const sorted = [...sessions].sort((a, b) => new Date(b.startTime) - new Date(a.startTime));
         
         tbody.innerHTML = sorted.map(s => {
-            // Format vehicle cell: italics if classified, with confidence percentage
-            const vehicleCell = s.vehicleId === 'unknown' 
-                ? 'Unknown'
-                : `<em>${s.vehicleDisplayName}</em> (${Math.round(s.confidence * 100)}%)`;
-            
+            let vehicleCell = '';
+            if (s.vehicleId === 'unknown') {
+                vehicleCell = 'Unknown';
+            } else if (s.source === 'manual') {
+                vehicleCell = `<em>${s.vehicleDisplayName}</em>`;
+            } else if (s.source === 'classifier') {
+                // Color code confidence: green (>=0.8), yellow (0.5-0.79), red (<0.5)
+                let confColor = '';
+                if (typeof s.confidence === 'number') {
+                    if (s.confidence >= 0.8) confColor = 'style="color:#228B22;font-weight:bold"';
+                    else if (s.confidence >= 0.5) confColor = 'style="color:#b59f00;font-weight:bold"';
+                    else confColor = 'style="color:#b22222;font-weight:bold"';
+                }
+                vehicleCell = `<em>${s.vehicleDisplayName}</em> <span ${confColor}>(${Math.round((s.confidence||0)*100)}%)</span>`;
+            } else {
+                vehicleCell = `<em>${s.vehicleDisplayName}</em>`;
+            }
             return `
             <tr>
                 <td>${formatDateTime(s.localStartTime)}</td>

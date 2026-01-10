@@ -350,6 +350,13 @@ This document describes all data files in the CPH50 Control system, their purpos
 - Merges cache data (metrics) with vehicle_map (correct vehicle IDs)
 - All data served from GitHub (no authentication needed for reads)
 
+**Mileage Calculation for Unknown Vehicles**:
+If a session's vehicle is unknown, mileage is estimated using a weighted average efficiency (mi/kWh) of all known vehicles, weighted by total kWh delivered (not session count). This ensures the estimate reflects the actual energy usage pattern of the fleet. The formula is:
+
+  weighted_avg_efficiency = sum(total_kWh_vehicle_i * efficiency_vehicle_i) / sum(total_kWh_vehicle_i)
+
+This value is used for all unknown vehicles in the analytics and session table.
+
 **Auth Integration**: Uses global `window.isContributor` (future manual labeling UI)
 
 ---
