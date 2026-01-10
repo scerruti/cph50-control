@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
-    <title>Designing with AI: The Solution Space - CPH50 Control Blog</title>
+    <title>Architecture: Exploring the Solution Space - CPH50 Control Blog</title>
     <style>
         * { margin: 0; padding: 0; box-sizing: border-box; }
         body {
@@ -91,7 +91,7 @@
 <body>
     <div class="container">
         <header>
-            <h1>Designing with AI: The Solution Space</h1>
+            <h1>Architecture: Exploring the Solution Space</h1>
             <div class="post-meta">
                 📅 January 9, 2026 | 
                 <span class="tag">ai</span>
@@ -107,7 +107,7 @@
         </nav>
 
         <article>
-            <p>This project started as a design conversation with AI. I wanted to explore every viable option to extend charging past 6 AM without destroying the value of ChargePoint's Energy Price Plan scheduling. AI became a fast way to map the option space, quantify trade-offs, and make a decision grounded in constraints.</p>
+            <p>To extend charging past 6 AM without new hardware, I needed to evaluate the architecture options against strict constraints. I used an LLM to generate a matrix of viable platforms and quantify their trade-offs.</p>
 
             <h2>Constraints on the Table</h2>
 
@@ -157,39 +157,36 @@
                 Cons: No Node APIs (must be pure fetch/crypto); 10ms CPU bursts, so code must be lean.
             </div>
 
-            <p>AI was the accelerator here. Instead of manually tabulating pros/cons, I asked AI to list constraints, filter options, and highlight hidden costs (like DST risk, power draw, token storage). That surfaced Cloudflare Workers as the cleanest fit.</p>
-
             <h2>Why Cloudflare Workers Won</h2>
 
+            <p>Cloudflare Workers fit the constraints best. Unlike a Raspberry Pi (which requires OS patches and idle power), the Worker is stateless, free for this request volume, and handles the DST logic natively.</p>
+
+            <p>The cron fires twice daily: at 13:00 UTC and 14:00 UTC. This ensures that 6:00 AM Local Time is always captured, regardless of whether Pacific Time is in Standard (UTC-8) or Daylight Saving (UTC-7). The Worker script checks the local hour and exits if it is not 6 AM.</p>
+
             <ul>
-                <li><strong>Time zone sanity:</strong> Cron runs at 13:00 and 14:00 UTC; the Worker checks <code>America/Los_Angeles</code> and exits unless the local hour is 6. DST handled.</li>
                 <li><strong>Secrets and trust:</strong> Wrangler keeps <code>CP_USERNAME</code>, <code>CP_PASSWORD</code>, <code>CP_STATION_ID</code>, <code>ALERT_EMAIL</code> scoped to the Worker. No third-party server.</li>
                 <li><strong>Zero hardware:</strong> Nothing to power, patch, or monitor. The platform is already on my critical path (DNS, WAF), so I trust its operational stance.</li>
                 <li><strong>Built-in email:</strong> MailChannels is available for alerting without extra services.</li>
             </ul>
 
-            <h2>How AI Shaped the Architecture</h2>
+            <h2>Implementation Details</h2>
 
-            <p>Instead of a blank page, AI provided:</p>
+            <p>Key implementation decisions:</p>
 
             <ul>
-                <li>Concrete cron expression: <code>0 13,14 * * *</code> to catch 6 AM Pacific year-round.</li>
-                <li>Reminder to double-check LA timezone in the Worker before acting.</li>
-                <li>Call stack outline: login → capture token/cookies → start_session → retry with backoff.</li>
-                <li>Platform guardrails: avoid Node APIs; rely on <code>fetch</code> and Web Crypto.</li>
+                <li>Cron expression: <code>0 13,14 * * *</code> to catch 6 AM Pacific year-round.</li>
+                <li>Runtime check: Verify local timezone hour before acting.</li>
+                <li>Call stack: login → capture token/cookies → start_session → retry with backoff.</li>
+                <li>Platform constraints: No Node APIs; rely on <code>fetch</code> and Web Crypto.</li>
             </ul>
-
-            <blockquote>
-                The value of AI here wasn't writing every line of code—it was pruning dead ends and putting the right constraints on the table before I invested time.
-            </blockquote>
 
             <h2>Decision Recorded</h2>
 
-            <p>With constraints honored and trade-offs compared, Cloudflare Workers became the obvious choice: serverless, zero-cost, time-zone aware, and already within my trust boundary. The next step was turning community knowledge into code.</p>
+            <p>With constraints honored and trade-offs compared, Cloudflare Workers became the clear choice: serverless, zero-cost, time-zone aware, and already within my trust boundary.</p>
 
             <hr style="margin: 40px 0; border: none; border-top: 1px solid #e5e7eb;">
 
-            <p><strong>Series navigation:</strong> Prev → <a href="03-standing-on-community-shoulders.html" style="color: #667eea;">Standing on Community Shoulders</a> | Next → <a href="05-ai-as-code-translator-and-debugger.html" style="color: #667eea;">AI as Code Translator & Debugger</a></p>
+            <p><strong>Series navigation:</strong> Prev → <a href="03-standing-on-community-shoulders.html" style="color: #667eea;">Standing on Community Shoulders</a> | Next → <a href="05-ai-as-code-translator-and-debugger.html" style="color: #667eea;">Implementation: Migrating to Cloudflare Workers</a></p>
         </article>
 
         <!-- Comments powered by giscus. Configured for repo discussions category "Blog comments". -->

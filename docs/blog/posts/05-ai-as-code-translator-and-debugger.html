@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
-    <title>AI as Code Translator & Debugger - CPH50 Control Blog</title>
+    <title>Implementation: Migrating to Cloudflare Workers - CPH50 Control Blog</title>
     <style>
         * { margin: 0; padding: 0; box-sizing: border-box; }
         body {
@@ -97,7 +97,7 @@
 <body>
     <div class="container">
         <header>
-            <h1>AI as Code Translator & Debugger</h1>
+            <h1>Implementation: Migrating to Cloudflare Workers</h1>
             <div class="post-meta">
                 📅 January 9, 2026 | 
                 <span class="tag">ai</span>
@@ -113,11 +113,11 @@
         </nav>
 
         <article>
-            <p>Once the architecture was chosen (Cloudflare Workers), the challenge shifted to implementation details. I leaned on AI as a translator between the Python-centric community docs and the TypeScript/Workers runtime, and as a debugger for all the sharp edges hidden in HTTP minutiae.</p>
+            <p>The community documentation relies on Python's blocking <code>requests</code> library. Cloudflare Workers run on the V8 Isolate engine, which requires using the non-blocking <code>fetch</code> API. The implementation challenge was mapping these synchronous Python patterns to modern TypeScript.</p>
 
-            <h2>From Python Examples to TypeScript Workers</h2>
+            <h2>From Python to Workers</h2>
 
-            <p>Community examples are mostly Python. Workers run in a V8 isolate with a Web-standard API surface—no <code>requests</code>, no <code>fs</code>, no Node <code>Buffer</code>. AI helped map common patterns:</p>
+            <p>Workers run in a V8 isolate with a Web-standard API surface—no <code>requests</code>, no <code>fs</code>, no Node <code>Buffer</code>. Key translations:</p>
 
             <ul>
                 <li><strong>requests.post → fetch:</strong> JSON body for modern endpoints; URL-encoded form for legacy NA endpoints.</li>
@@ -131,13 +131,13 @@
                 <li><strong>User-Agent enforcement:</strong> <code>ChargePoint/6.113.0 (com.chargepoint.mobile; build:1; iOS 16.0.0)</code> is required. Without it, the API returns HTML 404 or 403.</li>
                 <li><strong>Legacy NA shard:</strong> Modern docs say <code>account.chargepoint.com</code>; my account is on <code>na.chargepoint.com</code>. Different endpoints, form-encoding instead of JSON.</li>
                 <li><strong>Password encoding:</strong> <code>#</code> must be percent-escaped (<code>%23</code>) in form data. The fix was to use URLSearchParams or <code>--data-urlencode</code> in curl.</li>
-                <li><strong>Station ID format:</strong> Needs the <code>1:</code> prefix (e.g., <code>1:214541061163</code>). Raw serial numbers fail.</li>
+                <li><strong>Station ID format:</strong> Needs the <code>1:</code> prefix (e.g., <code>1:&lt;YOUR_STATION_ID&gt;</code>). Raw serial numbers fail.</li>
                 <li><strong>WAF behaviors:</strong> ChargePoint sometimes returns HTML for errors. AI suggested logging the entire body on failure to catch hidden messages.</li>
             </ol>
 
             <p>Each of these was solved by pairing with AI: describe the symptom, paste the response, get a hypothesis, and test the fix. The loop time was minutes instead of hours.</p>
 
-            <h2>Building the Worker Skeleton</h2>
+            <h2>Worker Implementation</h2>
 
             <pre><code class="language-typescript">export interface Env {
   CP_USERNAME: string;
@@ -157,23 +157,19 @@ export default {
   }
 };</code></pre>
 
-            <p>AI helped keep this tight and compliant with Workers constraints—no extraneous dependencies, all Web APIs.</p>
+            <p>This structure stays compliant with Workers constraints—no extraneous dependencies, all Web APIs.</p>
 
             <h2>Retries and Alerting</h2>
 
-            <p>Another pattern I asked AI to draft: a retry wrapper with exponential backoff (2s, 4s, 8s) around both login and start_session calls, plus a MailChannels alert on final failure.</p>
-
-            <blockquote>
-                The biggest gain from AI wasn't generating boilerplate; it was shortening the diagnosis loop when an HTTP quirk or platform constraint surfaced.
-            </blockquote>
+            <p>The implementation includes a retry wrapper with exponential backoff (2s, 4s, 8s) around both login and start_session calls, plus a MailChannels alert on final failure.</p>
 
             <h2>Outcome</h2>
 
-            <p>Weeks of reverse-engineering condensed into a day of paired debugging. The Worker now logs clearly, retries sensibly, and sends alerts when things go wrong—all while respecting the charger’s native scheduling.</p>
+            <p>The Worker logs clearly, retries sensibly, and sends alerts when things go wrong—all while respecting the charger's native scheduling.</p>
 
             <hr style="margin: 40px 0; border: none; border-top: 1px solid #e5e7eb;">
 
-            <p><strong>Series navigation:</strong> Prev → <a href="04-designing-with-ai-the-solution-space.html" style="color: #667eea;">Designing with AI: The Solution Space</a> | Next → <a href="06-two-paths-same-goal.html" style="color: #667eea;">Two Paths, Same Goal</a></p>
+            <p><strong>Series navigation:</strong> Prev → <a href="04-designing-with-ai-the-solution-space.html" style="color: #667eea;">Architecture: Exploring the Solution Space</a> | Next → <a href="06-two-paths-same-goal.html" style="color: #667eea;">Two Paths, Same Goal</a></p>
         </article>
 
         <!-- Comments powered by giscus. Configured for repo discussions category "Blog comments". -->

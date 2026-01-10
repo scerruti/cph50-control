@@ -183,9 +183,9 @@ Content-Type: application/x-www-form-urlencoded</code></pre>
 
             <p>Even after authentication worked, I couldn't start a charging session. The API kept returning errors about an invalid station ID.</p>
 
-            <p>My CPH50 has a serial number on the physical label: <code>214541061163</code>. I assumed that was the station ID. Nope.</p>
+            <p>My CPH50 has a serial number on the physical label: <code>&lt;YOUR_STATION_ID&gt;</code>. I assumed that was the station ID. Nope.</p>
 
-            <p>The legacy API expects a different format: <code>1:214541061163</code>.</p>
+            <p>The legacy API expects a different format: <code>1:&lt;YOUR_STATION_ID&gt;</code>.</p>
 
             <p>The <code>1:</code> prefix is a namespace identifier. If you provide a raw serial number, the API interprets it as an internal database ID and returns <code>404 Not Found</code>. Add the prefix, and it works.</p>
 
