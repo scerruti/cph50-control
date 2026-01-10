@@ -1,0 +1,14 @@
+title: CPH50 Control
+description: "Charger automation and telemetry"
+baseurl: "/cph50-control"
+url: "https://scerruti.github.io"
+theme: null
+plugins:
+  - jekyll-feed
+exclude:
+  - Gemfile
+  - Gemfile.lock
+  - README.md
+  - JEKYLL_MIGRATION_PLAN.md
+  - node_modules
+  - test_env

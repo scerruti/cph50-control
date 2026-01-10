@@ -1,0 +1,77 @@
+---
+layout: default
+title: Charging History
+permalink: /history/
+---
+
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+<style>
+    .summary {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+        gap: 20px;
+        margin-bottom: 30px;
+    }
+    .card {
+        background: white;
+        padding: 20px;
+        border-radius: 8px;
+        box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    }
+    .card h3 {
+        color: #667eea;
+        font-size: 0.9em;
+        text-transform: uppercase;
+        letter-spacing: 1px;
+        margin-bottom: 10px;
+    }
+    .card .value {
+        font-size: 2em;
+        font-weight: bold;
+        color: #333;
+    }
+    
+    .charts {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+        gap: 20px;
+        margin-bottom: 30px;
+    }
+    .chart-container {
+        background: white;
+        padding: 20px;
+        border-radius: 8px;
+        box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        position: relative;
+        height: 300px;
+    }
+</style>
+
+<h2>Historical Analytics</h2>
+
+<div class="summary">
+    <div class="card">
+        <h3>Total Sessions</h3>
+        <div class="value" id="total-sessions">—</div>
+    </div>
+    <div class="card">
+        <h3>Total Energy</h3>
+        <div class="value" id="total-energy">—</div>
+    </div>
+    <div class="card">
+        <h3>Avg Cost</h3>
+        <div class="value" id="avg-cost">—</div>
+    </div>
+</div>
+
+<div class="charts">
+    <div class="chart-container">
+        <canvas id="chart-energy"></canvas>
+    </div>
+    <div class="chart-container">
+        <canvas id="chart-cost"></canvas>
+    </div>
+</div>
+
+<p style="text-align: center; color: #666; margin-top: 40px;">Historical data dashboard. Data is populated from completed charging sessions.</p>
