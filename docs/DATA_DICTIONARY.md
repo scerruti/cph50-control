@@ -131,6 +131,70 @@ This document describes all data files in the CPH50 Control system, their purpos
 
 ---
 
+### `data/session_cache/YYYY-MM.json`
+**Purpose**: Full ChargePoint session data for history display (populated by `fetch_session_details.py`)  
+**Format**: Array of session objects  
+**Created/Updated by**: `fetch_session_details.py` (triggered after session completes)  
+**Read by**: `history.html` (history page displays cached data)  
+**Frequency**: One entry per charging session; file grows over the month (~30-40 sessions/month)  
+**Organization**: Monthly files for efficient loading (single fetch = entire month)
+
+**File Size**: ~60-150 KB per month (manageable for git, fast to load)
+
+**Structure** (array of sessions):
+```json
+[
+  {
+    "session_id": "4751613101",
+    "session_start_time": "2026-01-10T14:00:01+00:00",
+    "session_end_time": "2026-01-10T22:30:15+00:00",
+    "vehicle": {
+      "vehicle_id": "serenity_equinox_2024",
+      "vehicle_name": "Serenity",
+      "model": "Equinox EV",
+      "vin": "...",
+      "make": "Chevrolet"
+    },
+    "location": {
+      "location_id": "...",
+      "name": "Home",
+      "address": "...",
+      "city": "Oceanside",
+      "state": "CA",
+      "zip_code": "92054"
+    },
+    "charger": {
+      "charger_id": "...",
+      "connector_type": "J1772",
+      "charger_model": "CPH50",
+      "level": 2
+    },
+    "session": {
+      "energy_kwh": 51.22,
+      "duration_seconds": 30614,
+      "cost": 8.45,
+      "peak_power_kw": 11.5,
+      "status": "completed"
+    },
+    "utility": {
+      "utility_name": "SDG&E",
+      "utility_company": "San Diego Gas & Electric"
+    },
+    "vehicle_id": "serenity_equinox_2024",
+    "vehicle_confidence": 0.95
+  },
+  ...additional sessions...
+]
+```
+
+**Notes**:
+- Organized by month (YYYY-MM.json) for efficient history page loading
+- Contains vehicle classification merged from `data/sessions/{date}/{id}.json`
+- Atomic writes (temp file + rename) prevent corruption
+- Each commit shows full month snapshot for audit trail
+
+---
+
 ### `data/.last_session_id.json`
 **Purpose**: Internal tracking of last detected session (not exposed to dashboard)  
 **Format**: Flat JSON  
@@ -213,7 +277,7 @@ This document describes all data files in the CPH50 Control system, their purpos
 
 ### `history.html` (History/Analytics)
 **Reads**:
-- All files in `data/sessions/YYYY/MM/DD/` (discovered recursively)
+- Monthly cache files from `data/session_cache/YYYY-MM.json`
 - `data/vehicle_config.json` (vehicle names and efficiency)
 
 **Display**:
