@@ -60,7 +60,7 @@ permalink: /history/
         <div class="value" id="total-energy">—</div>
     </div>
     <div class="card">
-        <h3>Avg Cost</h3>
+        <h3>Avg Duration</h3>
         <div class="value" id="avg-cost">—</div>
     </div>
 </div>
@@ -79,27 +79,37 @@ permalink: /history/
 <script>
     async function loadHistory() {
         try {
-            const response = await fetch('https://raw.githubusercontent.com/scerruti/cph50-control/main/data/runs.json?t=' + Date.now());
-            if (!response.ok) throw new Error('Failed to fetch historical data');
-            const data = await response.json();
+            // Load all available charging session files
+            const sessionFiles = ['4751613101.json', '4754846071.json', '4758000341.json'];
+            let totalEnergy = 0;
+            let totalDuration = 0;
+            let sessionCount = 0;
             
-            if (!data.runs || data.runs.length === 0) {
-                document.querySelector('p').innerHTML = 'No historical data yet. Data is populated from completed charging sessions.';
-                return;
+            for (const file of sessionFiles) {
+                try {
+                    const response = await fetch(`https://raw.githubusercontent.com/scerruti/cph50-control/main/data/sessions/${file}?t=${Date.now()}`);
+                    if (response.ok) {
+                        const session = await response.json();
+                        totalEnergy += session.energy_kwh || 0;
+                        totalDuration += session.duration_seconds || 0;
+                        sessionCount += 1;
+                    }
+                } catch (e) {
+                    console.warn(`Could not load session ${file}`);
+                }
             }
             
-            const runs = data.runs;
-            const totalSessions = runs.length;
-            const totalEnergy = (runs.reduce((sum, r) => sum + (r.energy_kwh || 0), 0)).toFixed(1);
-            const avgCost = runs.length > 0 ? (runs.reduce((sum, r) => sum + (r.cost || 0), 0) / runs.length).toFixed(2) : '0.00';
+            const avgDurationMinutes = sessionCount > 0 ? Math.round(totalDuration / sessionCount / 60) : 0;
             
-            document.getElementById('total-sessions').textContent = totalSessions;
-            document.getElementById('total-energy').textContent = totalEnergy + ' kWh';
-            document.getElementById('avg-cost').textContent = '$' + avgCost;
+            document.getElementById('total-sessions').textContent = sessionCount;
+            document.getElementById('total-energy').textContent = totalEnergy.toFixed(1) + ' kWh';
+            document.getElementById('avg-cost').textContent = avgDurationMinutes + ' min';
             
         } catch (error) {
             console.error('History error:', error);
-            document.querySelector('p').innerHTML = 'Unable to load historical data. Please try again later.';
+            document.getElementById('total-sessions').textContent = '—';
+            document.getElementById('total-energy').textContent = '—';
+            document.getElementById('avg-cost').textContent = '—';
         }
     }
     
