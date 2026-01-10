@@ -8,6 +8,7 @@ import os
 import sys
 import json
 import subprocess
+import time
 from datetime import datetime
 from zoneinfo import ZoneInfo
 from python_chargepoint import ChargePoint
@@ -146,10 +147,8 @@ def monitor():
             # Charging detected but sessionId not yet available: retry until consistent
             print("⏳ Charging detected; waiting for session ID (eventual consistency)...")
             for attempt in range(1, 11):
-                try:
-                    sleep(2)
-                except Exception:
-                    pass
+                # small backoff while session ID propagates
+                time.sleep(2)
                 status = client.get_user_charging_status()
                 if status and getattr(status, "session_id", 0):
                     current_session_id = str(status.session_id)
@@ -170,6 +169,44 @@ def monitor():
             })
             if current_session_id:
                 print(f"📊 Active Session: {current_session_id}")
+                # Fetch live session metrics (power, energy, duration)
+                try:
+                    session_details = client.get_charging_session(current_session_id)
+                    status_data.update({
+                        "power_kw": getattr(session_details, "power_kw", None),
+                        "energy_kwh": getattr(session_details, "energy_kwh", None),
+                        "duration_minutes": getattr(session_details, "duration_minutes", None),
+                    })
+                except ChargePointCommunicationException:
+                    # Leave metrics as None if API temporarily unavailable
+                    pass
+                # Attempt to annotate vehicle from known labels or collected data
+                try:
+                    # Prefer collected session data (classifier output)
+                    data_path = os.path.join("data", "sessions", f"{current_session_id}.json")
+                    if os.path.exists(data_path):
+                        with open(data_path, "r") as f:
+                            collected = json.load(f)
+                        status_data.update({
+                            "vehicle_id": collected.get("vehicle_id"),
+                            "vehicle_confidence": collected.get("vehicle_confidence"),
+                        })
+                    else:
+                        # Fallback to manual mapping file
+                        map_path = os.path.join("data", "session_vehicle_map.json")
+                        if os.path.exists(map_path):
+                            with open(map_path, "r") as f:
+                                mapping = json.load(f)
+                            entry = mapping.get("sessions", {}).get(current_session_id)
+                            if entry:
+                                status_data.update({
+                                    "vehicle_id": entry.get("vehicle"),
+                                    # Map textual confidence to a rough numeric value
+                                    "vehicle_confidence": 0.9 if entry.get("confidence") == "high" else 0.6 if entry.get("confidence") == "medium" else None,
+                                })
+                except Exception:
+                    # Non-blocking: vehicle annotation is best-effort
+                    pass
         
         # Load last known session
         last_session_id, last_timestamp = load_last_session()

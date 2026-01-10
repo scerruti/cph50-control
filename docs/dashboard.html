@@ -235,7 +235,9 @@
     <script>
         const VEHICLE_IMAGES = {
             volvo: 'images/volvo.png',
-            equinox: 'images/equinox.png'
+            equinox: 'images/equinox.png',
+            volvo_xc40_2021: 'images/volvo.png',
+            serenity_equinox_2024: 'images/equinox.png'
         };
         
         async function loadDashboard() {
@@ -260,7 +262,7 @@
             const connected = Boolean(status.connected);
             const plugged = Boolean(status.plugged_in);
             const chargingState = status.charging_status || 'UNKNOWN';
-            const power = typeof session?.power_kw === 'number' ? session.power_kw : 0;
+            const power = typeof session?.power_kw === 'number' ? session.power_kw : null;
             const hasActiveSession = Boolean(session?.session_id);
 
             let stateLabel = '⏸️ Idle';
@@ -268,7 +270,7 @@
             if (!connected) {
                 stateLabel = '📡 Offline';
                 stateClass = 'idle';
-            } else if (power > 0.5 || chargingState === 'CHARGING' || hasActiveSession) {
+            } else if ((typeof power === 'number' && power > 0.5) || chargingState === 'CHARGING' || hasActiveSession) {
                 stateLabel = '🔌 Charging';
                 stateClass = 'charging';
             } else if (plugged) {
@@ -279,15 +281,20 @@
             const confidence = session?.vehicle_confidence || 0;
             let vehicleDisplay = '';
             const vehicleImage = VEHICLE_IMAGES[vehicle] || VEHICLE_IMAGES.volvo;
-            if (vehicle === 'volvo') {
-                vehicleDisplay = '2021 Volvo XC40 Recharge';
-            } else if (vehicle === 'equinox') {
-                vehicleDisplay = '2024 Chevrolet Equinox EV';
-            } else {
-                vehicleDisplay = 'Unknown Vehicle';
+            switch (vehicle) {
+                case 'volvo':
+                case 'volvo_xc40_2021':
+                    vehicleDisplay = '2021 Volvo XC40 Recharge';
+                    break;
+                case 'equinox':
+                case 'serenity_equinox_2024':
+                    vehicleDisplay = '2024 Chevrolet Equinox EV';
+                    break;
+                default:
+                    vehicleDisplay = 'Unknown Vehicle';
             }
 
-            const powerValue = connected ? power.toFixed(1) : '—';
+            const powerValue = (typeof power === 'number') ? power.toFixed(1) : '—';
             const energyValue = session?.energy_kwh ? session.energy_kwh.toFixed(1) : '—';
             const durationValue = session?.duration_minutes ? Math.round(session.duration_minutes) : '—';
             const lastUpdated = session?.timestamp || session?.detected_at || null;
