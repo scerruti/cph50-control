@@ -185,7 +185,6 @@ permalink: /history/
 
 <h2>Charging History</h2>
 
-<div id="auth-container" style="margin-bottom: 20px;"></div>
 <div id="status-container"></div>
 
 <div class="controls">
@@ -271,137 +270,6 @@ permalink: /history/
     let chart = null;
     let vehicleConfig = {};
     let sessionVehicleMap = {};
-    let authToken = localStorage.getItem('github_pat_token') || null;
-    let isContributor = false;
-    
-    async function checkGitHubAuth() {
-        /**
-         * Check if user is authenticated and is a contributor.
-         * Uses GitHub Personal Access Token (stored in localStorage).
-         * 
-         * Security Note: This is a temporary implementation using PATs.
-         * For production, implement OAuth2 with secure backend token exchange.
-         * See KNOWN_ISSUES.md for authentication roadmap.
-         */
-        if (!authToken) {
-            renderAuthUI();
-            return false;
-        }
-        
-        try {
-            // Verify token and check if user is collaborator
-            const userResponse = await fetch('https://api.github.com/user', {
-                headers: {
-                    'Authorization': `token ${authToken}`,
-                    'Accept': 'application/vnd.github.v3+json'
-                }
-            });
-            
-            if (!userResponse.ok) {
-                console.warn('Invalid GitHub token');
-                localStorage.removeItem('github_pat_token');
-                authToken = null;
-                renderAuthUI();
-                return false;
-            }
-            
-            const user = await userResponse.json();
-            
-            // Check if user is collaborator
-            const collabResponse = await fetch('https://api.github.com/repos/scerruti/cph50-control/collaborators/' + user.login, {
-                headers: {
-                    'Authorization': `token ${authToken}`,
-                    'Accept': 'application/vnd.github.v3+json'
-                }
-            });
-            
-            if (collabResponse.ok) {
-                isContributor = true;
-                renderAuthUI(user.login, true);
-                return true;
-            } else {
-                console.warn('User is not a collaborator');
-                renderAuthUI(user.login, false);
-                return false;
-            }
-        } catch (e) {
-            console.error('Auth check failed:', e);
-            renderAuthUI();
-            return false;
-        }
-    }
-    
-    function renderAuthUI(username = null, isContrib = false) {
-        /**
-         * Render authentication UI based on auth state
-         */
-        const container = document.getElementById('auth-container');
-        
-        if (username && isContrib) {
-            // Authenticated contributor
-            container.innerHTML = `
-                <div class="status-message" style="border-left-color: #10b981; background: #ecfdf5; color: #065f46;">
-                    ✓ Logged in as <strong>${username}</strong> (contributor)
-                    <button onclick="logoutGitHub()" style="margin-left: 20px; padding: 4px 12px; font-size: 12px;">Logout</button>
-                </div>
-            `;
-        } else if (username) {
-            // Authenticated but not contributor
-            container.innerHTML = `
-                <div class="status-message warning">
-                    Logged in as <strong>${username}</strong> (read-only access)
-                    <button onclick="logoutGitHub()" style="margin-left: 20px; padding: 4px 12px; font-size: 12px; background: #6b7280; color: white; border: none; border-radius: 4px; cursor: pointer;">Logout</button>
-                </div>
-            `;
-        } else {
-            // Not authenticated
-            container.innerHTML = `
-                <div class="status-message" style="border-left-color: #6366f1; background: #eef2ff; color: #312e81;">
-                    <details>
-                        <summary style="cursor: pointer; font-weight: 600;">GitHub Login (Contributors Only)</summary>
-                        <div style="margin-top: 12px;">
-                            <p style="font-size: 12px; margin: 0 0 10px 0;">Paste your GitHub Personal Access Token (repo scope):</p>
-                            <div style="display: flex; gap: 8px;">
-                                <input type="password" id="pat-input" placeholder="ghp_..." style="flex: 1; padding: 8px; border: 1px solid #ccc; border-radius: 4px; font-size: 12px;">
-                                <button onclick="loginWithPAT()" style="padding: 8px 16px; background: #6366f1; color: white; border: none; border-radius: 4px; cursor: pointer;">Login</button>
-                            </div>
-                            <p style="font-size: 11px; color: #666; margin-top: 8px;">
-                                <a href="https://github.com/settings/tokens" target="_blank">Create a token</a> with <code>repo</code> scope
-                            </p>
-                        </div>
-                    </details>
-                </div>
-            `;
-        }
-    }
-    
-    function loginWithPAT() {
-        /**
-         * Store PAT and verify access
-         */
-        const input = document.getElementById('pat-input');
-        if (!input) return;
-        
-        const token = input.value.trim();
-        if (!token) {
-            alert('Please paste a GitHub Personal Access Token');
-            return;
-        }
-        
-        localStorage.setItem('github_pat_token', token);
-        authToken = token;
-        checkGitHubAuth();
-    }
-    
-    function logoutGitHub() {
-        /**
-         * Clear authentication
-         */
-        localStorage.removeItem('github_pat_token');
-        authToken = null;
-        isContributor = false;
-        renderAuthUI();
-    }
     
     async function fetchSessionFromChargePoint(sessionId, monthKey) {
         /**
@@ -977,7 +845,7 @@ permalink: /history/
     
     // Initialize
     async function init() {
-        await checkGitHubAuth();
+        window.initAuth();
         await discoverSessions();
         updateDisplay();
     }

@@ -93,6 +93,7 @@
         }
     </style>
     {% include analytics.html %}
+    <script src="/assets/js/auth.js"></script>
 </head>
 <body>
     <div class="container">
@@ -102,6 +103,7 @@
         </header>
 
         {% include nav.html %}
+        {% include auth.html %}
 
         <article>
             {{ content }}
