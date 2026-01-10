@@ -2,5 +2,16 @@
   "session_id": null,
   "timestamp": null,
   "detected_at": null,
-  "status": {}
+  "power_kw": 0,
+  "energy_kwh": null,
+  "duration_minutes": null,
+  "vehicle_id": null,
+  "vehicle_confidence": null,
+  "status": {
+    "connected": false,
+    "plugged_in": false,
+    "charging_status": "UNKNOWN",
+    "charger_id": null,
+    "last_connected_at": null
+  }
 }

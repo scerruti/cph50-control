@@ -27,7 +27,7 @@ def load_last_session():
 def save_current_session(session_id, status_info=None):
     """Save current session ID and metadata to tracking file."""
     session_file = "data/last_session.json"
-    
+
     data = {
         "session_id": session_id,
         "timestamp": datetime.now(ZoneInfo('UTC')).isoformat(),
@@ -39,10 +39,10 @@ def save_current_session(session_id, status_info=None):
         "vehicle_confidence": status_info.get("vehicle_confidence") if status_info else None,
         "status": status_info or {}
     }
-    
+
     with open(session_file, 'w') as f:
         json.dump(data, f, indent=2)
-    
+
     # Commit to git
     try:
         subprocess.run(["git", "add", session_file], check=True, capture_output=True)
@@ -103,6 +103,32 @@ def monitor():
         client = ChargePoint(username=username, password=password)
         print("✓ Authentication successful")
         
+        # Get charger status (online/plugged) for dashboard context
+        print("🔍 Fetching home charger status...")
+        charger_ids = client.get_home_chargers()
+        charger_id = charger_ids[0] if charger_ids else None
+        charger_status = None
+        status_data = {}
+
+        if charger_id:
+            charger_status = client.get_home_charger_status(charger_id)
+            status_data.update(
+                {
+                    "charger_id": charger_id,
+                    "connected": getattr(charger_status, "connected", False),
+                    "plugged_in": getattr(charger_status, "plugged_in", False),
+                    "charging_status": getattr(charger_status, "charging_status", "UNKNOWN"),
+                    "last_connected_at": getattr(charger_status, "last_connected_at", None).isoformat()
+                    if getattr(charger_status, "last_connected_at", None)
+                    else None,
+                }
+            )
+            print(
+                f"📡 Charger {charger_id} | Connected: {status_data['connected']} | Plugged: {status_data['plugged_in']} | State: {status_data['charging_status']}"
+            )
+        else:
+            print("⚠️  No charger IDs returned; skipping charger status")
+
         # Get charging status
         print("🔍 Checking charging status...")
         status = client.get_user_charging_status()
@@ -110,18 +136,17 @@ def monitor():
         # Extract current session info
         current_session_id = None
         is_charging = False
-        status_data = {}
         
         if hasattr(status, 'session_id') and status.session_id:
             current_session_id = str(status.session_id)
             is_charging = True
-            status_data = {
+            status_data.update({
                 "session_id": current_session_id,
                 "charging": is_charging,
                 "power_kw": getattr(status, 'power_kw', None),
                 "energy_kwh": getattr(status, 'energy_kwh', None),
                 "duration_minutes": getattr(status, 'duration_minutes', None)
-            }
+            })
             print(f"📊 Active Session: {current_session_id}")
             print(f"   Power: {status_data.get('power_kw', 'N/A')} kW")
             print(f"   Energy: {status_data.get('energy_kwh', 'N/A')} kWh")
@@ -151,6 +176,8 @@ def monitor():
             save_current_session(current_session_id, status_data)
         else:
             print("✓ No active session (vehicle not charging)")
+            # Update dashboard with latest charger state
+            save_current_session(None, status_data)
         
         print("=" * 60)
         print("✅ Session monitoring check complete")

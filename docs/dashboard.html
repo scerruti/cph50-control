@@ -240,14 +240,12 @@
         
         async function loadDashboard() {
             try {
-                // Check if there's an active session file
                 const response = await fetch('data/last_session.json');
-                
                 if (!response.ok) {
                     displayNoData();
                     return;
                 }
-                
+
                 const session = await response.json();
                 displaySession(session);
             } catch (error) {
@@ -255,20 +253,31 @@
                 displayNoData();
             }
         }
-        
+
         function displaySession(session) {
-            if (!session || !session.power_kw) {
-                displayNoData();
-                return;
+            const status = session?.status || {};
+            const connected = Boolean(status.connected);
+            const plugged = Boolean(status.plugged_in);
+            const chargingState = status.charging_status || 'UNKNOWN';
+            const power = typeof session?.power_kw === 'number' ? session.power_kw : 0;
+            const hasActiveSession = Boolean(session?.session_id);
+
+            let stateLabel = '⏸️ Idle';
+            let stateClass = 'idle';
+            if (!connected) {
+                stateLabel = '📡 Offline';
+                stateClass = 'idle';
+            } else if (power > 0.5 || chargingState === 'CHARGING' || hasActiveSession) {
+                stateLabel = '🔌 Charging';
+                stateClass = 'charging';
+            } else if (plugged) {
+                stateLabel = '🟢 Plugged in, waiting';
             }
-            
-            const isCharging = session.power_kw > 0.5;
-            const vehicle = session.vehicle_id || 'unknown';
-            const confidence = session.vehicle_confidence || 0;
-            
+
+            const vehicle = session?.vehicle_id || 'unknown';
+            const confidence = session?.vehicle_confidence || 0;
             let vehicleDisplay = '';
-            let vehicleImage = VEHICLE_IMAGES[vehicle] || VEHICLE_IMAGES.volvo;
-            
+            const vehicleImage = VEHICLE_IMAGES[vehicle] || VEHICLE_IMAGES.volvo;
             if (vehicle === 'volvo') {
                 vehicleDisplay = '2021 Volvo XC40 Recharge';
             } else if (vehicle === 'equinox') {
@@ -276,12 +285,17 @@
             } else {
                 vehicleDisplay = 'Unknown Vehicle';
             }
-            
+
+            const powerValue = connected ? power.toFixed(1) : '—';
+            const energyValue = session?.energy_kwh ? session.energy_kwh.toFixed(1) : '—';
+            const durationValue = session?.duration_minutes ? Math.round(session.duration_minutes) : '—';
+            const lastUpdated = session?.timestamp || session?.detected_at || null;
+
             const html = `
-                <div class="status-badge ${isCharging ? 'charging' : 'idle'}">
-                    ${isCharging ? '🔌 Charging' : '⏸️ Idle'}
+                <div class="status-badge ${stateClass}">
+                    ${stateLabel}
                 </div>
-                
+
                 <div class="vehicle-section">
                     <div class="vehicle-image">
                         <img src="${vehicleImage}" alt="${vehicleDisplay}">
@@ -289,39 +303,39 @@
                     <div class="vehicle-name">${vehicleDisplay}</div>
                     ${confidence > 0 ? `<div class="vehicle-confidence">Classification: ${(confidence * 100).toFixed(0)}% confidence</div>` : ''}
                 </div>
-                
+
                 <div class="power-section">
                     <div class="power-label">Current Draw</div>
-                    <div class="power-value">${session.power_kw.toFixed(1)}</div>
+                    <div class="power-value">${powerValue}</div>
                     <div class="power-unit">kilowatts</div>
                 </div>
-                
+
                 <div class="info-grid">
                     <div class="info-card">
                         <div class="info-label">Energy Added</div>
-                        <div class="info-value">${session.energy_kwh ? session.energy_kwh.toFixed(1) : '—'}</div>
+                        <div class="info-value">${energyValue}</div>
                     </div>
                     <div class="info-card">
                         <div class="info-label">Duration</div>
-                        <div class="info-value">${session.duration_minutes ? Math.round(session.duration_minutes) : '—'}</div>
+                        <div class="info-value">${durationValue}</div>
                     </div>
                 </div>
-                
+
                 <button class="refresh-button" onclick="location.reload()">Refresh</button>
-                
+
                 <div class="last-updated">
-                    Last updated: ${new Date(session.timestamp).toLocaleTimeString()}
+                    Last updated: ${lastUpdated ? new Date(lastUpdated).toLocaleTimeString() : '—'}
                 </div>
             `;
-            
+
             document.getElementById('charging-status').innerHTML = html;
         }
-        
+
         function displayNoData() {
             document.getElementById('charging-status').innerHTML = `
                 <div class="no-data">
                     <div class="no-data-icon">🔋</div>
-                    <p>No active charging session</p>
+                    <p>No charger data yet</p>
                     <button class="refresh-button" onclick="location.reload()">Refresh</button>
                 </div>
             `;
