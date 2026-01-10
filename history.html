@@ -851,7 +851,7 @@ permalink: /history/
             }
         });
     }
-
+        
     function updateSessionsTable(sessions) {
         const tbody = document.getElementById('sessions-tbody');
 
@@ -860,7 +860,7 @@ permalink: /history/
             return;
         }
 
-        // Sort by start time descending
+        // Sort by start time descending (Newest first)
         const sorted = [...sessions].sort((a, b) => new Date(b.startTime) - new Date(a.startTime));
 
         tbody.innerHTML = sorted.map(s => {
@@ -868,17 +868,20 @@ permalink: /history/
             if (s.vehicleId === 'unknown') {
                 vehicleCell = 'Unknown';
             } else if (s.source === 'manual') {
+                // Manual (Rare) -> Italics
                 vehicleCell = `<em>${s.vehicleDisplayName}</em>`;
             } else if (s.source === 'classifier') {
-                // Color code confidence: green (>=0.8), yellow (0.5-0.79), red (<0.5)
+                // Classifier (Standard) -> Normal Text
                 let confColor = '';
                 if (typeof s.confidence === 'number') {
                     if (s.confidence >= 0.8) confColor = 'style="color:#228B22;font-weight:bold"';
                     else if (s.confidence >= 0.5) confColor = 'style="color:#b59f00;font-weight:bold"';
                     else confColor = 'style="color:#b22222;font-weight:bold"';
                 }
-                vehicleCell = `<em>${s.vehicleDisplayName}</em> <span ${confColor}>(${Math.round((s.confidence || 0) * 100)}%)</span>`;
+                // REMOVED <em> tags here
+                vehicleCell = `${s.vehicleDisplayName} <span ${confColor}>(${Math.round((s.confidence || 0) * 100)}%)</span>`;
             } else {
+                // Fallback -> Italics
                 vehicleCell = `<em>${s.vehicleDisplayName}</em>`;
             }
 
@@ -886,26 +889,29 @@ permalink: /history/
             let rowStyle = '';
 
             if (s.isActive) {
-                // Use formatDuration here
-                durationDisplay = `<span style="color:#228B22; font-weight:bold">${formatDuration(s.duration)} (Active)</span>`;
+                // Active session
+                // Use formatDuration if you added the helper, otherwise s.duration + ' min'
+                // Assuming you stick to the minute format for now based on your last paste:
+                durationDisplay = `<span style="color:#228B22; font-weight:bold">${s.duration} min (Active)</span>`;
             } else if (s.isZombie) {
+                // Broken session
                 durationDisplay = '<span style="color:#cc0000; font-size:0.9em">DATA ERR</span>';
                 rowStyle = 'style="background-color: #fff0f0"'; 
             } else {
-                // And use it here
-                durationDisplay = formatDuration(s.duration);
+                // Standard session
+                durationDisplay = s.duration + ' min';
             }
-            
+
             return `
-    <tr ${rowStyle}>
-        <td>${formatDateTime(s.localStartTime)}</td>
-        <td>${vehicleCell}</td>
-        <td>${s.energy.toFixed(1)}</td>
-        <td>${s.miles.toFixed(1)}</td>
-        <td>${durationDisplay}</td>
-        <td>${s.location}</td>
-    </tr>
-`;
+            <tr ${rowStyle}>
+                <td>${formatDateTime(s.localStartTime)}</td>
+                <td>${vehicleCell}</td>
+                <td>${s.energy.toFixed(1)}</td>
+                <td>${s.miles.toFixed(1)}</td>
+                <td>${durationDisplay}</td>
+                <td>${s.location}</td>
+            </tr>
+        `;
         }).join('');
     }
 
