@@ -132,27 +132,44 @@ def monitor():
         # Get charging status
         print("🔍 Checking charging status...")
         status = client.get_user_charging_status()
-        
+
         # Extract current session info
         current_session_id = None
         is_charging = False
-        
-        if hasattr(status, 'session_id') and status.session_id:
+
+        # Treat library's user status and home charger status together
+        user_state = getattr(status, "state", None) if status else None
+        if status and getattr(status, "session_id", 0):
             current_session_id = str(status.session_id)
             is_charging = True
-            status_data.update({
-                "session_id": current_session_id,
-                "charging": is_charging,
-                "power_kw": getattr(status, 'power_kw', None),
-                "energy_kwh": getattr(status, 'energy_kwh', None),
-                "duration_minutes": getattr(status, 'duration_minutes', None)
-            })
-            print(f"📊 Active Session: {current_session_id}")
-            print(f"   Power: {status_data.get('power_kw', 'N/A')} kW")
-            print(f"   Energy: {status_data.get('energy_kwh', 'N/A')} kWh")
-            print(f"   Charging: {is_charging}")
+        elif user_state == "in_use" or (status_data.get("charging_status") == "CHARGING"):
+            # Charging detected but sessionId not yet available: retry until consistent
+            print("⏳ Charging detected; waiting for session ID (eventual consistency)...")
+            for attempt in range(1, 11):
+                try:
+                    sleep(2)
+                except Exception:
+                    pass
+                status = client.get_user_charging_status()
+                if status and getattr(status, "session_id", 0):
+                    current_session_id = str(status.session_id)
+                    is_charging = True
+                    print(f"✓ Session ID acquired after {attempt*2}s: {current_session_id}")
+                    break
+            if not current_session_id:
+                # Still charging but without sessionId; record charging state only
+                is_charging = True
+                print("⚠️  Charging without session ID (yet); will update snapshot and recheck next cycle")
         else:
             print("ℹ️  No active charging session")
+
+        if is_charging:
+            status_data.update({
+                "session_id": current_session_id,
+                "charging": True,
+            })
+            if current_session_id:
+                print(f"📊 Active Session: {current_session_id}")
         
         # Load last known session
         last_session_id, last_timestamp = load_last_session()
