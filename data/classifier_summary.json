@@ -1,5 +1,5 @@
 {
-  "volvo": {
+  "volvo_xc40_2021": {
     "count": 1,
     "mean_power": {
       "mean": 8.495770212765958,
@@ -14,7 +14,7 @@
       "std": 0.0
     }
   },
-  "equinox": {
+  "serenity_equinox_2024": {
     "count": 1,
     "mean_power": {
       "mean": 9.006980952380953,
