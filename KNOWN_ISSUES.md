@@ -1,5 +1,49 @@
 # Known Issues
 
+## GitHub Authentication (Personal Access Token)
+
+**Issue**: Authentication uses GitHub Personal Access Tokens (PATs) stored in browser localStorage - temporary solution pending proper OAuth2 implementation.
+
+**Current Implementation**:
+- Users manually paste GitHub PAT into history page
+- Token stored in `localStorage` (persists across browser sessions)
+- Checked against GitHub API to verify collaborator status on `scerruti/cph50-control`
+- Only contributors can access admin features (future)
+
+**Security Concerns**:
+- ⚠️ PAT stored in localStorage - accessible to XSS attacks
+- ⚠️ Token visible in browser dev tools
+- ⚠️ No automatic token refresh or expiration
+- ⚠️ Requires user to manually create and manage tokens
+
+**Why This Approach (Temporary)**:
+- No backend token exchange server needed yet
+- Simple to implement for single-user development
+- Sufficient for current use case (only you access admin features)
+
+**Future Solution - OAuth2 Flow**:
+- User clicks "Login with GitHub"
+- Redirects to GitHub OAuth authorize page
+- Backend securely exchanges code for access token
+- Token stored in secure HTTP-only cookie
+- No PAT storage in localStorage
+- Automatic expiration and refresh handling
+
+**Roadmap**:
+1. ✅ Current: PAT-based auth (working, limited security)
+2. ⏳ Phase 2: OAuth2 with backend token exchange
+3. ⏳ Phase 3: Multi-user permissions model
+
+**Mitigation (Current)**:
+- Only share repo link with trusted users
+- Regenerate/revoke PAT if compromised
+- Consider repo private if security is critical
+- Monitor for unauthorized commits in git log
+
+**Status**: Known limitation; acceptable for single-developer setup. Upgrade to OAuth2 when adding multi-user features.
+
+---
+
 ## Daylight Saving Time Transitions
 
 **Issue**: During DST transitions (spring forward and fall back), the history page may display incorrectly:
