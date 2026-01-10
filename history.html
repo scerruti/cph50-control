@@ -689,16 +689,22 @@ permalink: /history/
         // Sort by start time descending
         const sorted = [...sessions].sort((a, b) => new Date(b.startTime) - new Date(a.startTime));
         
-        tbody.innerHTML = sorted.map(s => `
+        tbody.innerHTML = sorted.map(s => {
+            // Format vehicle cell: italics if classified, with confidence percentage
+            const vehicleCell = s.vehicleId === 'unknown' 
+                ? 'Unknown'
+                : `<em>${s.vehicleDisplayName}</em> (${Math.round(s.confidence * 100)}%)`;
+            
+            return `
             <tr>
                 <td>${formatDateTime(s.localStartTime)}</td>
-                <td>${s.vehicleDisplayName}</td>
+                <td>${vehicleCell}</td>
                 <td>${s.energy.toFixed(1)}</td>
                 <td>${s.miles.toFixed(1)}</td>
                 <td>${s.duration ? s.duration + ' min' : '—'}</td>
                 <td>${s.location}</td>
             </tr>
-        `).join('');
+        `}).join('');
     }
     
     function formatDateTime(date) {
