@@ -421,8 +421,37 @@ permalink: /history/
             weightedAvgEfficiency = 2.5;
         }
 
-        // Sort by start time
+        // 1. Sort by start time (Oldest -> Newest)
         allSessions.sort((a, b) => new Date(a.startTime) - new Date(b.startTime));
+        
+        // 2. ONE-TIME DATA FIX: Handle missing end times
+        if (allSessions.length > 0) {
+            // Identify the timestamp of the latest session
+            // (Since we just sorted, it's technically the last item, but Math.max is safer if sort changes)
+            const latestStartTime = allSessions[allSessions.length - 1].startTime.getTime();
+
+            allSessions.forEach(s => {
+                // Only fix sessions where endTime is null
+                if (!s.endTime) {
+                    if (s.startTime.getTime() === latestStartTime) {
+                        // CASE A: It is the latest session -> It is ACTIVE
+                        s.endTime = new Date(); 
+                        s.isActive = true; 
+                        s.duration = Math.round((s.endTime - s.startTime) / 1000 / 60);
+                    } else {
+                        // CASE B: It is an old session -> It is BROKEN (Zombie)
+                        // "Cap" it at the start time so it becomes a Point Event
+                        s.endTime = s.startTime;
+                        s.isZombie = true;
+                        s.duration = 0; // 0 minutes duration
+                    }
+                    
+                    // Update derived field for display
+                    s.localEndTime = convertToLocalTime(s.endTime);
+                }
+            });
+        }
+
         console.log(`Loaded ${allSessions.length} sessions`);
     }
 
@@ -462,14 +491,16 @@ permalink: /history/
          * Vehicle names and efficiency come from vehicle_config.json
          */
         const startTime = new Date(data.session_start_time || 0);
-        const endTime = new Date(data.session_end_time || 0);
         const localStartTime = convertToLocalTime(startTime);
 
+
+        // Just pass the raw value (or null) through. 
+        // We will calculate the real 'endTime' in the post-processing step.
+        const endTime = data.session_end_time ? new Date(data.session_end_time) : null;
+
         // Calculate duration from start/end times
-        let duration = null;
-        if (startTime && endTime && endTime > startTime) {
-            duration = Math.round((endTime - startTime) / 1000 / 60);
-        }
+        // Duration is null if we don't have an end time
+        const duration = endTime ? Math.round((endTime - startTime) / 1000 / 60) : null;
 
         const sessionId = data.session_id;
 
@@ -498,13 +529,14 @@ permalink: /history/
             id: sessionId,
             startTime: startTime,
             localStartTime: localStartTime,
-            endTime: endTime,
-            duration: duration,
+            endTime: endTime, // May be null
+            duration: duration, // in minutes, may be null
             energy: energy,
             miles: miles,
             vehicleId: vehicleId,
             vehicleDisplayName: getVehicleDisplayName(vehicleId),
             confidence: confidence,
+            source: (confidence > 0) ? 'classifier' : 'manual',
             location: 'Home'  // Only one location for now (home charger)
         };
     }
@@ -572,7 +604,8 @@ permalink: /history/
 
     function isSessionInPeriod(session) {
         const start = session.startTime;
-        let end = session.endTime;
+        const end = session.endTime;
+
 
         let periodStart, periodEnd;
 
@@ -589,19 +622,7 @@ permalink: /history/
             periodEnd = new Date(currentDate.getFullYear(), 11, 31, 23, 59, 59, 999);
         }
 
-        // If end is missing, only treat as in-progress if this is the most recent session
-        if (!end || isNaN(end.getTime())) {
-            // Find the latest session start time in allSessions
-            const latestStart = Math.max(...allSessions.map(s => s.startTime.getTime()));
-            if (start.getTime() === latestStart) {
-                end = new Date(); // treat as in-progress, use now as end
-            } else {
-                // Not the latest session, ignore
-                return false;
-            }
-        }
-
-        // Session overlaps period if it started before period ends and ended after period starts
+        // Now standard overlap logic works perfectly
         return start <= periodEnd && end >= periodStart;
     }
 
@@ -860,16 +881,30 @@ permalink: /history/
             } else {
                 vehicleCell = `<em>${s.vehicleDisplayName}</em>`;
             }
+
+            let durationDisplay;
+            let rowStyle = '';
+
+            if (s.isActive) {
+                durationDisplay = `<span style="color:#228B22; font-weight:bold">${s.duration} min (Active)</span>`;
+            } else if (s.isZombie) {
+                durationDisplay = '<span style="color:#cc0000; font-size:0.9em">DATA ERR</span>';
+                rowStyle = 'style="background-color: #fff0f0"'; 
+            } else {
+                durationDisplay = s.duration + ' min';
+            }
+
             return `
-            <tr>
-                <td>${formatDateTime(s.localStartTime)}</td>
-                <td>${vehicleCell}</td>
-                <td>${s.energy.toFixed(1)}</td>
-                <td>${s.miles.toFixed(1)}</td>
-                <td>${s.duration ? s.duration + ' min' : '—'}</td>
-                <td>${s.location}</td>
-            </tr>
-        `}).join('');
+    <tr ${rowStyle}>
+        <td>${formatDateTime(s.localStartTime)}</td>
+        <td>${vehicleCell}</td>
+        <td>${s.energy.toFixed(1)}</td>
+        <td>${s.miles.toFixed(1)}</td>
+        <td>${durationDisplay}</td>
+        <td>${s.location}</td>
+    </tr>
+`;
+        }).join('');
     }
 
 
