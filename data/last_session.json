@@ -1,8 +1,8 @@
 {
-  "timestamp": "2026-01-11T11:13:44.255154+00:00",
-  "detected_at": "2026-01-11 03:13:44 PST",
-  "power_kw": 9.0042,
-  "energy_kwh": 28.492201,
+  "timestamp": "2026-01-11T11:30:27.452846+00:00",
+  "detected_at": "2026-01-11 03:30:27 PST",
+  "power_kw": 0.0,
+  "energy_kwh": 29.4513,
   "duration_minutes": null,
   "vehicle_id": null,
   "vehicle_confidence": null,
