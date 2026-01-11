@@ -1,11 +1,11 @@
 {
-  "timestamp": "2026-01-11T19:29:07.200953+00:00",
-  "detected_at": "2026-01-11 11:29:07 PST",
-  "power_kw": null,
-  "energy_kwh": null,
+  "timestamp": "2026-01-11T19:40:30.021670+00:00",
+  "detected_at": "2026-01-11 11:40:30 PST",
+  "power_kw": 9.082,
+  "energy_kwh": 0.0738,
   "duration_minutes": null,
   "vehicle_id": null,
   "vehicle_confidence": null,
   "connected": true,
-  "charging": false
+  "charging": true
 }
