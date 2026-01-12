@@ -31,3 +31,6 @@ node_modules/
 
 # Fly.io (deprecated)
 fly.toml
+
+# Local environment/utility scripts
+set_cp_env.sh
