@@ -1,9 +1,6 @@
 name: EV Charging Automation
 
 on:
-  schedule:
-    # Weekdays, single early run. 12:45 UTC = 5:45 PDT / 4:45 PST; script waits until 6:00 PT.
-    - cron: '45 12 * * 1-5'
   workflow_dispatch: # Allow manual triggering for testing
 
 concurrency:

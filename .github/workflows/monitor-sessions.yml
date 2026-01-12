@@ -1,9 +1,6 @@
 name: Monitor Charging Sessions
 
 on:
-  schedule:
-    # Every 10 minutes to detect new charging sessions
-    - cron: '*/10 * * * *'
   workflow_dispatch: # Manual trigger for testing
 
 permissions:
