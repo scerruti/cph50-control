@@ -1,0 +1,2 @@
+python-chargepoint
+requests
